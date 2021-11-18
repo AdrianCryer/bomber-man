@@ -1,0 +1,7 @@
+/dist
+/node_modules
+# /test
+.mscbackup
+/src/test
+yarn.lock
+package-lock.json

@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { Graphics, settings } from "pixi.js";
+import { Graphics } from "pixi.js";
 import GameMap, { CellType } from "./game-map";
 import Player, { Bomb, Direction } from "./player";
 import { UserInputController } from "./player-controller";
@@ -29,13 +29,6 @@ export type GameSettings = {
     brickSpawnPercentage: number;
 };
 
-// type GameCell = {
-//     powerups: any[];
-//     bombs: Bomb[];
-//     explosions: Explosion[];
-//     hasBlock: boolean;
-// };
-
 type Explosion = {
     graphic: Graphics;
     addedToCanvas: boolean;
@@ -43,6 +36,7 @@ type Explosion = {
     radius: number;
     duration: number;
     timeCreated: number;
+    affectedCells: Position[];
 };
 
 type Brick = GameCell & {
@@ -147,7 +141,7 @@ export default class Game {
         // }
     }
 
-    private renderCell(x: number, y: number, cell: GameCell) {
+    private renderCell(x: number, y: number, cell: GameCell, intialPass=true) {
 
         const cellWidth = Math.min(
             this.app.screen.width / this.settings.map.props.width,
@@ -168,7 +162,9 @@ export default class Game {
             .lineStyle(1, 0xFFFFFF, 1)
             .drawRect(x * cellWidth, y * cellWidth, cellWidth, cellWidth)
             .endFill();
-        this.app.stage.addChild(cell.graphic);
+        if (intialPass) {
+            this.app.stage.addChild(cell.graphic);
+        }
     }
 
     private renderGrid() {
@@ -250,34 +246,63 @@ export default class Game {
     }
 
     renderExplosion(explosion: Explosion) {
-        const { height: mapHeight, width: mapWidth } = this.settings.map.props;
-        let { x, y } = explosion.center;
+        explosion.graphic.clear();
+        for (let cellPos of explosion.affectedCells) {
+            this.renderExplosionAtCell(explosion, cellPos.x, cellPos.y);
+        }
+    }
+
+    getCellsAffectedByExplosion(centre: Position, radius: number): Position[] {
+
+        const { height, width } = this.settings.map.props;
+        let { x, y } = centre;
         let i = 0;
         let stopped = Array(4).fill(false).slice();
-        
-        explosion.graphic.clear();
-        this.renderExplosionAtCell(explosion, x, y);
+        let affectedCells: Position[] = [Object.assign({}, centre)];
 
-        while (i <= explosion.radius - 1 && !stopped.every(e => e == true)) {
-            stopped = [
-                stopped[0] || x + i >= mapWidth || this.isBlocked({ x: x + i , y}),
-                stopped[1] || x - i < 0 || this.isBlocked({ x: x - i , y }),
-                stopped[2] || y + i >= mapHeight || this.isBlocked({ x , y: y + i }),
-                stopped[3] || y - i < 0 || this.isBlocked({ x , y: y - i })
-            ];
-            if (!stopped[0]) {
-                this.renderExplosionAtCell(explosion, x + i, y);
+        const handleNextCell = (dirIndex: number, nextPos: Position) => {
+            if (this.cells[nextPos.y][nextPos.x].type === CellType.BRICK) {
+                affectedCells.push(nextPos);
+                stopped[dirIndex] = true;
+            } else if (this.isBlocked(nextPos)) {
+                stopped[dirIndex] = true;
+            } else {
+                affectedCells.push(nextPos);
             }
-            if (!stopped[1]) {
-                this.renderExplosionAtCell(explosion, x - i, y);
+        }
+
+        while (i < radius && !stopped.every(e => e == true)) {
+
+            if (!stopped[0] && x + i < width) {
+                handleNextCell(0, { x: x + i, y });
             }
-            if (!stopped[2]) {
-                this.renderExplosionAtCell(explosion, x, y + i);
+            if (!stopped[1] && x - i >= 0) {
+                handleNextCell(1, { x: x - i, y });
             }
-            if (!stopped[3]) {
-                this.renderExplosionAtCell(explosion, x, y - i);
+            if (!stopped[2] && y + i < height) {
+                handleNextCell(2, { x, y: y + i });
+            }
+            if (!stopped[3] && y - i >= 0) {
+                handleNextCell(3, { x, y: y - i });
             }
             i++;
+        }
+
+        return affectedCells;
+    }
+
+    handleExplosion(explosion: Explosion) {
+        for (let cellPos of explosion.affectedCells) {
+            let cell = this.cells[cellPos.y][cellPos.x];
+            if (cell.type === CellType.BRICK) {
+
+                cell.type = CellType.OPEN;
+                this.cells[cellPos.y][cellPos.x] = cell as GameCell;
+                console.log("REMOVED", cell, cellPos)
+
+                // Rerender
+                this.renderCell(cellPos.x, cellPos.y, cell, false);
+            }
         }
     }
 
@@ -359,17 +384,20 @@ export default class Game {
 
                 // Explode
                 if (shouldExplode && !bomb.isSliding) {
-                    this.explosions.push({
+
+                    const explosion = {
                         graphic: new Graphics(),
                         addedToCanvas: false,
                         center: bomb.position,
                         radius: bomb.explosionRadius,
                         duration: bomb.explosionDuration,
+                        affectedCells: this.getCellsAffectedByExplosion(bomb.position, bomb.explosionRadius),
                         timeCreated: time,
-                    });
-
-                    // Remove destroyed blocks / items
+                    };
                     
+                    // Remove destroyed blocks / items
+                    this.explosions.push(explosion);
+                    this.handleExplosion(explosion);
 
                     // Remove bomb
                     player.bombs.splice(i, 1);

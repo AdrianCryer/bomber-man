@@ -26,7 +26,6 @@ export type Bomb = {
     explosionRadius: number;
     explosionDuration: number;
     position: Position;
-
     isSliding: boolean;
     slidingSpeed: number;
     slidingDirection?: Direction;

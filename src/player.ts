@@ -82,9 +82,10 @@ export default class Player {
     }
 
     placeBomb() {
+
         this.bombs.push({
             graphic: new Graphics(),
-            position: Object.assign({}, this.cellPosition),
+            position: { x: Math.round(this.position.x), y: Math.round(this.position.y) },
             explosionRadius: this.bombExplosionRadius,
             explosionDuration: this.bombExplosionDuration,
             timePlaced: (new Date()).getTime(),

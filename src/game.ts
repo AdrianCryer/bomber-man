@@ -35,6 +35,7 @@ type GameCell = {
 
 type Explosion = {
     graphic: Graphics;
+    addedToCanvas: boolean;
     center: Position;
     radius: number;
     duration: number;
@@ -70,8 +71,8 @@ export default class Game {
                 position: settings.map.startingPositions[0],
                 speed: settings.initialSpeed,
                 bombCount: 1,
-                bombExplosionRadius: 2,
-                bombExplosionDuration: 2,
+                bombExplosionRadius: 5,
+                bombExplosionDuration: 1,
                 bombTimer: 1
             }
         ));
@@ -165,6 +166,60 @@ export default class Game {
         }
     }
 
+    private renderExplosionAtCell(explosion: Explosion, x: number, y: number) {
+        const { height: mapHeight, width: mapWidth } = this.settings.map.props;
+        const cellWidth = Math.min(
+            this.app.screen.width / mapWidth,
+            this.app.screen.height / mapHeight,
+        );
+        
+        explosion.graphic
+            .beginFill(0xB53737)
+            .drawRect(
+                x * cellWidth, 
+                y * cellWidth, 
+                cellWidth, 
+                cellWidth
+            );
+        if (!explosion.addedToCanvas) {
+            explosion.addedToCanvas = true;
+            this.app.stage.addChild(explosion.graphic);
+        }
+    }
+
+    renderExplosion(explosion: Explosion) {
+        const { height: mapHeight, width: mapWidth } = this.settings.map.props;
+        let { x, y } = explosion.center;
+        let i = 0;
+        let stopped = Array(4).fill(false).slice();
+        
+        explosion.graphic.clear();
+        this.renderExplosionAtCell(explosion, x, y);
+
+
+        while (i <= explosion.radius - 1) {
+            stopped = [
+                stopped[0] || x + i >= mapWidth || this.isBlocked(x + i , y),
+                stopped[1] || x - i < 0 || this.isBlocked(x - i , y),
+                stopped[2] || y + i >= mapHeight || this.isBlocked(x , y + i),
+                stopped[3] || y - i < 0 || this.isBlocked(x , y - i)
+            ];
+            if (!stopped[0]) {
+                this.renderExplosionAtCell(explosion, x + i, y);
+            }
+            if (!stopped[1]) {
+                this.renderExplosionAtCell(explosion, x - i, y);
+            }
+            if (!stopped[2]) {
+                this.renderExplosionAtCell(explosion, x, y + i);
+            }
+            if (!stopped[3]) {
+                this.renderExplosionAtCell(explosion, x, y - i);
+            }
+            i++;
+        }
+    }
+
     start() {
         // Render grid,
         this.renderGrid();
@@ -180,6 +235,10 @@ export default class Game {
         });
         this.renderPlayers(true);
         this.app.ticker.add(() => this.loop())
+    }
+
+    isBlocked(x: number, y: number): boolean {
+        return this.settings.map.getCell(y, x) === CellType.BRICK;
     }
 
     canMove(player: Player): boolean {
@@ -212,6 +271,7 @@ export default class Game {
                 if (time >= bomb.timePlaced + bomb.timer * 1000) {
                     this.explosions.push({
                         graphic: new Graphics(),
+                        addedToCanvas: false,
                         center: bomb.position,
                         radius: bomb.explosionRadius,
                         duration: bomb.explosionDuration,
@@ -219,7 +279,8 @@ export default class Game {
                     });
 
                     // Remove bomb
-                    // player.bombs.splice(i, 1);
+                    player.bombs.splice(i, 1);
+                    this.app.stage.removeChild(bomb.graphic);
                 }
             }
 
@@ -227,6 +288,7 @@ export default class Game {
                 // Remove Explosion
                 if (time >= explosion.timeCreated + explosion.duration * 1000) {
                     this.explosions.splice(i, 1);
+                    this.app.stage.removeChild(explosion.graphic);
                 }
             }
 
@@ -268,6 +330,9 @@ export default class Game {
             for (let bomb of player.bombs) {
                 this.renderBomb(bomb);
             }
+        }
+        for (let explosion of this.explosions) {
+            this.renderExplosion(explosion)
         }
     }
 }

@@ -1,8 +1,9 @@
 import * as PIXI from "pixi.js";
 import { Graphics, settings } from "pixi.js";
 import GameMap, { CellType } from "./game-map";
-import Player, { Direction } from "./player";
+import Player, { Bomb, Direction } from "./player";
 import { UserInputController } from "./player-controller";
+import { Position } from "./types";
 
 export type GameSettings = {
 
@@ -26,17 +27,26 @@ export type GameSettings = {
 };
 
 type GameCell = {
-    players: any[];
     powerups: any[];
-    hasBomb: boolean;
+    bombs: Bomb[];
+    explosions: Explosion[];
     hasBlock: boolean;
-}
+};
+
+type Explosion = {
+    graphic: Graphics;
+    center: Position;
+    radius: number;
+    duration: number;
+    timeCreated: number;
+};
 
 export default class Game {
 
     settings: GameSettings;
     app: PIXI.Application;
-    gameState: GameCell[][];
+    // gridState: GameCell[][];
+    explosions: Explosion[];
     players: Player[];
     time: number;
 
@@ -44,14 +54,26 @@ export default class Game {
         this.settings = settings;
         this.app = app;
 
+        // Set initial positions
+        const startingPositions = settings.map.startingPositions;
+
         // Setup players
         this.players = [];
+        this.explosions = [];
 
         // Add human player
         this.players.push(new Player(
             0, 
             new Graphics(),
-            new UserInputController()
+            new UserInputController(),
+            {
+                position: settings.map.startingPositions[0],
+                speed: settings.initialSpeed,
+                bombCount: 1,
+                bombExplosionRadius: 2,
+                bombExplosionDuration: 2,
+                bombTimer: 1
+            }
         ));
 
         // Add bots
@@ -64,13 +86,6 @@ export default class Game {
         for (let player of this.players) {
             player.controller.setup(this, player);
         }
-
-        // Set initial positions
-        const startingPositions = settings.map.startingPositions;
-        this.players[0].position = Object.assign({}, startingPositions[0]);
-        this.players[0].cellPosition = Object.assign({}, startingPositions[0]);
-        this.players[0].speed = settings.initialSpeed;
-
     }
 
     private renderCell(x: number, y: number, width: number, type: CellType) {
@@ -109,28 +124,45 @@ export default class Game {
             this.app.screen.height / mapHeight,
         );
         
-        
         for (let player of this.players) {
-            if (initialPass || player.wantsToMove) {
-                player.graphic.clear();
-                player.graphic
-                    .beginFill(0xEA4C46)
-                    .drawRect(
-                        (0.25 + player.position.x) * cellWidth, 
-                        (0.25 + player.position.y) * cellWidth, 
-                        cellWidth / 2,
-                        cellWidth / 2
-                    )
-                    .endFill();
-                if (initialPass) {
-                    this.app.stage.addChild(player.graphic);
-                }
+            // if (player.wantsToMove) {
+            player.graphic.clear();
+            player.graphic
+                .beginFill(0xEA4C46)
+                .drawRect(
+                    (0.25 + player.position.x) * cellWidth, 
+                    (0.25 + player.position.y) * cellWidth, 
+                    cellWidth / 2,
+                    cellWidth / 2
+                )
+                .endFill();
+            // }
+            if (initialPass) {
+                this.app.stage.addChild(player.graphic);
             }
         }
     }
 
-    renderBomb() {
-        
+    renderBomb(bomb: Bomb) {
+        const { height: mapHeight, width: mapWidth } = this.settings.map.props;
+        const cellWidth = Math.min(
+            this.app.screen.width / mapWidth,
+            this.app.screen.height / mapHeight,
+        );
+
+        bomb.graphic.clear();
+        bomb.graphic
+            .beginFill(0x3A3B3C)
+            .drawCircle(
+                (0.5 + bomb.position.x) * cellWidth,
+                (0.5 + bomb.position.y) * cellWidth,
+                cellWidth / 3
+            )
+            .endFill();
+        if (!bomb.addedToCanvas) {
+            this.app.stage.addChild(bomb.graphic);
+            bomb.addedToCanvas = true;
+        }
     }
 
     start() {
@@ -144,10 +176,10 @@ export default class Game {
                 return;
             }
             this.time = timeNow;
-            this.fixedUpdate();
+            this.fixedUpdate(timeNow);
         });
         this.renderPlayers(true);
-        this.app.ticker.add(() => this.renderPlayers(true));
+        this.app.ticker.add(() => this.loop())
     }
 
     canMove(player: Player): boolean {
@@ -169,11 +201,36 @@ export default class Game {
         return this.settings.map.getCell(y, x) !== CellType.BRICK;
     }
 
-    fixedUpdate() {
+    fixedUpdate(time: number) {
 
-        // Apply movement
         for (let player of this.players) {
+            
+            // Apply bombs
+            for (let [i, bomb] of player.bombs.entries()) {
 
+                // Explode
+                if (time >= bomb.timePlaced + bomb.timer * 1000) {
+                    this.explosions.push({
+                        graphic: new Graphics(),
+                        center: bomb.position,
+                        radius: bomb.explosionRadius,
+                        duration: bomb.explosionDuration,
+                        timeCreated: time,
+                    });
+
+                    // Remove bomb
+                    // player.bombs.splice(i, 1);
+                }
+            }
+
+            for (let [i, explosion] of this.explosions.entries()) {
+                // Remove Explosion
+                if (time >= explosion.timeCreated + explosion.duration * 1000) {
+                    this.explosions.splice(i, 1);
+                }
+            }
+
+            // Apply movement
             if (!player.inTransition && player.wantsToMove && this.canMove(player)) {
                 player.moveTransitionPercent = 0;
                 player.moveTransitionDirection = player.movingDirection;
@@ -183,8 +240,6 @@ export default class Game {
             if (player.inTransition) {  
                 player.moveTransitionPercent += player.speed  / this.settings.tickrate;
                 player.moveTransitionPercent = Math.min(player.moveTransitionPercent, 1);
-                console.log(player.moveTransitionPercent, player.cellPosition, player.position)
-
 
                 if (player.moveTransitionDirection === Direction.UP) {
                     player.position.y = player.cellPosition.y - player.moveTransitionPercent;
@@ -208,6 +263,11 @@ export default class Game {
     }
 
     loop() {
-        this.renderPlayers();
+        this.renderPlayers(false);
+        for (let player of this.players) {
+            for (let bomb of player.bombs) {
+                this.renderBomb(bomb);
+            }
+        }
     }
 }

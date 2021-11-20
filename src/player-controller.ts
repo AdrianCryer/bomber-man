@@ -9,7 +9,6 @@ export class UserInputController implements PlayerController {
 
     setup(game: Game, thisPlayer: Player) {
         document.addEventListener('keydown', e => {
-            console.log(e)
             if (e.key === 'ArrowRight') {
                 thisPlayer.setMoving(Direction.RIGHT);
             } else if (e.key === 'ArrowLeft') {

@@ -3,21 +3,31 @@ import { Position } from "./types";
 import { PlayerController } from "./player-controller";
 
 export enum Direction {
-    UP = -1,
-    DOWN = 1,
+    UP,
+    DOWN,
     LEFT,
     RIGHT
 };
 
-// export type Direction = -1 | 0 | 1;
+type PlayerConfiguration = {
+    position: Position;
+    speed: number;
+    bombCount: number;
+    bombExplosionRadius: number;
+    bombExplosionDuration: number;
+    bombTimer: number;
+};
 
+export type Bomb = {
+    graphic: Graphics;
+    addedToCanvas: boolean;
+    timePlaced: number;
+    timer: number;
+    explosionRadius: number;
+    explosionDuration: number;
+    position: Position;
+};
 
-
-// type MoveTransition = {
-//     from: Position,
-//     to: Position,
-//     percentage: number
-// }
 
 export default class Player {
 
@@ -32,27 +42,38 @@ export default class Player {
     moveTransitionDirection: Direction;
 
     bombCount: number;
-    bombPlacedCell: Position;
+    bombs: Bomb[];
 
     position: Position;
     cellPosition: Position;
 
     powerups: any;
     speed: number;
-    explosionRadius: number;
+    bombExplosionRadius: number;
+    bombExplosionDuration: number;
+    bombTimer: number;
+
     isAlive: boolean;
 
     get controller(): PlayerController {
         return this.playerController
     }
 
-    constructor(id: number, graphic: Graphics, playerController: PlayerController) {
+    constructor(id: number, graphic: Graphics, playerController: PlayerController, settings: PlayerConfiguration) {
         this.id = id;
         this.graphic = graphic;
         this.playerController = playerController;
         this.wantsToMove = false;
         this.inTransition = false;
         this.moveTransitionPercent = 0;
+        this.cellPosition = Object.assign({}, settings.position);
+        this.position = Object.assign({}, settings.position);
+        this.speed = settings.speed;
+        this.bombCount = settings.bombCount;
+        this.bombTimer = settings.bombTimer;
+        this.bombExplosionRadius = settings.bombExplosionRadius;
+        this.bombExplosionDuration = settings.bombExplosionDuration;
+        this.bombs = [];
     }
 
     setMoving(direction: Direction) {
@@ -61,7 +82,16 @@ export default class Player {
     }
 
     placeBomb() {
-        this.bombPlacedCell = Object.assign({}, this.cellPosition);
+        this.bombs.push({
+            graphic: new Graphics(),
+            position: Object.assign({}, this.cellPosition),
+            explosionRadius: this.bombExplosionRadius,
+            explosionDuration: this.bombExplosionDuration,
+            timePlaced: (new Date()).getTime(),
+            timer: this.bombTimer,
+            addedToCanvas: false
+        });
         this.bombCount -= 1;
+        console.log(this.bombs);
     }
 }

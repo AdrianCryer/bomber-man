@@ -46,7 +46,6 @@ export default class Game {
 
     settings: GameSettings;
     app: PIXI.Application;
-    // gridState: GameCell[][];
     explosions: Explosion[];
     players: Player[];
     time: number;
@@ -73,7 +72,7 @@ export default class Game {
                 bombCount: 1,
                 bombExplosionRadius: 5,
                 bombExplosionDuration: 1,
-                bombTimer: 1
+                bombTimer: 5
             }
         ));
 
@@ -197,7 +196,7 @@ export default class Game {
         this.renderExplosionAtCell(explosion, x, y);
 
 
-        while (i <= explosion.radius - 1) {
+        while (i <= explosion.radius - 1 && !stopped.every(e => e == true)) {
             stopped = [
                 stopped[0] || x + i >= mapWidth || this.isBlocked(x + i , y),
                 stopped[1] || x - i < 0 || this.isBlocked(x - i , y),
@@ -241,23 +240,26 @@ export default class Game {
         return this.settings.map.getCell(y, x) === CellType.BRICK;
     }
 
-    canMove(player: Player): boolean {
+    getNextCell(position: Position, direction: Direction): Position {
+        let { x, y } = position;
+        if (direction === Direction.UP) {
+            y -= 1;
+        } else if (direction === Direction.DOWN) {
+            y += 1;
+        } else if (direction === Direction.LEFT) {
+            x -= 1;
+        } else if (direction === Direction.RIGHT) {
+            x += 1;
+        }
+        return { x, y };
+    }
 
+    canMove(player: Player): boolean {
         if (player.inTransition) {
             return false;
         }
-
-        let { x, y } = player.cellPosition;
-        if (player.movingDirection === Direction.UP) {
-            y -= 1;
-        } else if (player.movingDirection === Direction.DOWN) {
-            y += 1;
-        } else if (player.movingDirection === Direction.LEFT) {
-            x -= 1;
-        } else if (player.movingDirection === Direction.RIGHT) {
-            x += 1;
-        }
-        return this.settings.map.getCell(y, x) !== CellType.BRICK;
+        let { x, y } = this.getNextCell(player.cellPosition, player.movingDirection);
+        return !this.isBlocked(x, y);
     }
 
     fixedUpdate(time: number) {
@@ -267,8 +269,34 @@ export default class Game {
             // Apply bombs
             for (let [i, bomb] of player.bombs.entries()) {
 
+                const shouldExplode = time >= bomb.timePlaced + bomb.timer * 1000;
+
+                // Handle sliding
+                if (bomb.isSliding) {
+                    const delta = bomb.slidingSpeed  / this.settings.tickrate;
+                    
+                    if (bomb.slidingDirection === Direction.UP) {
+                        bomb.position.y -= delta;
+                    } else if (bomb.slidingDirection === Direction.DOWN) {
+                        bomb.position.y += delta;
+                    } else if (bomb.slidingDirection === Direction.LEFT) {
+                        bomb.position.x -= delta;
+                    } else if (bomb.slidingDirection === Direction.RIGHT) {
+                        bomb.position.x += delta;
+                    }
+
+                    const closest = { x: Math.round(bomb.position.x), y: Math.round(bomb.position.y) };
+                    const next = this.getNextCell(closest, bomb.slidingDirection);
+                    if (this.isBlocked(next.x, next.y) || shouldExplode) {
+                        if (Math.abs(bomb.position.x - closest.x) < delta && Math.abs(bomb.position.y - closest.y) < delta) {
+                            bomb.isSliding = false;
+                            bomb.position = closest;
+                        }
+                    }
+                }
+
                 // Explode
-                if (time >= bomb.timePlaced + bomb.timer * 1000) {
+                if (shouldExplode && !bomb.isSliding) {
                     this.explosions.push({
                         graphic: new Graphics(),
                         addedToCanvas: false,
@@ -297,6 +325,18 @@ export default class Game {
                 player.moveTransitionPercent = 0;
                 player.moveTransitionDirection = player.movingDirection;
                 player.inTransition = true;
+
+                // If target cell contains bomb, slide
+                const nextPos = this.getNextCell(player.position, player.moveTransitionDirection);
+                for (let player of this.players) {
+                    for (let bomb of player.bombs) {
+                        if (bomb.position.x === nextPos.x && bomb.position.y === nextPos.y) {
+
+                            bomb.isSliding = true;
+                            bomb.slidingDirection = player.moveTransitionDirection;
+                        }
+                    }
+                }
             }
 
             if (player.inTransition) {  

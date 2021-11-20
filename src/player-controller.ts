@@ -5,8 +5,15 @@ export interface PlayerController {
     setup: (view: Game, thisPlayer: Player) => void;
 };
 
-export class UserInputController implements PlayerController {
+const keyMap : { [key: string]: Direction } = {
+    'ArrowRight': Direction.RIGHT,
+    'ArrowLeft': Direction.LEFT,
+    'ArrowUp': Direction.UP,
+    'ArrowDown': Direction.DOWN,
+};
 
+export class UserInputController implements PlayerController {
+    
     setup(game: Game, thisPlayer: Player) {
         document.addEventListener('keydown', e => {
             if (e.key === 'ArrowRight') {
@@ -21,13 +28,6 @@ export class UserInputController implements PlayerController {
                 thisPlayer.placeBomb();
             }
         });
-
-        const keyMap : { [key: string]: Direction } = {
-            'ArrowRight': Direction.RIGHT,
-            'ArrowLeft': Direction.LEFT,
-            'ArrowUp': Direction.UP,
-            'ArrowDown': Direction.DOWN,
-        };
 
         document.addEventListener("keyup", e => {
             if (thisPlayer.wantsToMove && thisPlayer.movingDirection === keyMap[e.key]) {

@@ -26,6 +26,10 @@ export type Bomb = {
     explosionRadius: number;
     explosionDuration: number;
     position: Position;
+
+    isSliding: boolean;
+    slidingSpeed: number;
+    slidingDirection?: Direction;
 };
 
 
@@ -90,7 +94,9 @@ export default class Player {
             explosionDuration: this.bombExplosionDuration,
             timePlaced: (new Date()).getTime(),
             timer: this.bombTimer,
-            addedToCanvas: false
+            addedToCanvas: false,
+            isSliding: false,
+            slidingSpeed: 5
         });
         this.bombCount -= 1;
         console.log(this.bombs);

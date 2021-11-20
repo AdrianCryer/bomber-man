@@ -1,34 +1,46 @@
 import { Graphics, graphicsUtils } from "pixi.js";
+import { Position } from "./types";
 import { PlayerController } from "./player-controller";
 
-export enum Facing {
-    UP,
-    DOWN,
+export enum Direction {
+    UP = -1,
+    DOWN = 1,
     LEFT,
     RIGHT
 };
 
-export type Direction = -1 | 0 | 1;
+// export type Direction = -1 | 0 | 1;
+
+
+
+// type MoveTransition = {
+//     from: Position,
+//     to: Position,
+//     percentage: number
+// }
 
 export default class Player {
 
     id: number;
     graphic: Graphics;
     playerController: PlayerController;
-    moving: { x: Direction, y: Direction };
-    private _position: { x: number; y: number; };
+
+    movingDirection: Direction;
+    wantsToMove: boolean;
+    inTransition: boolean;
+    moveTransitionPercent: number;
+    moveTransitionDirection: Direction;
+
+    bombCount: number;
+    bombPlacedCell: Position;
+
+    position: Position;
+    cellPosition: Position;
+
     powerups: any;
     speed: number;
     explosionRadius: number;
     isAlive: boolean;
-
-    public get position(): { x: number; y: number; } {
-        return this._position;
-    }
-
-    public set position(value: { x: number; y: number; }) {
-        this._position = value;
-    }
 
     get controller(): PlayerController {
         return this.playerController
@@ -38,14 +50,18 @@ export default class Player {
         this.id = id;
         this.graphic = graphic;
         this.playerController = playerController;
-        this.moving = { x: 0, y: 0 };
+        this.wantsToMove = false;
+        this.inTransition = false;
+        this.moveTransitionPercent = 0;
     }
 
-    setMovingX(direction: Direction) {
-        this.moving.x = direction;
+    setMoving(direction: Direction) {
+        this.movingDirection = direction;
+        this.wantsToMove = true;
     }
 
-    setMovingY(direction: Direction) {
-        this.moving.y = direction;
+    placeBomb() {
+        this.bombPlacedCell = Object.assign({}, this.cellPosition);
+        this.bombCount -= 1;
     }
 }

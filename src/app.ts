@@ -19,7 +19,7 @@ async function run() {
         map: GameMap.loadFromFile(mapString),
         bots: 2,
         difficulty: 'easy',
-        initialSpeed: 3,
+        initialSpeed: 5,
         speedCap: 10,
         tickrate: 64
     };

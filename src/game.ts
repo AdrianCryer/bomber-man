@@ -1,7 +1,7 @@
 import * as PIXI from "pixi.js";
 import { Graphics, settings } from "pixi.js";
 import GameMap, { CellType } from "./game-map";
-import Player from "./player";
+import Player, { Direction } from "./player";
 import { UserInputController } from "./player-controller";
 
 export type GameSettings = {
@@ -67,7 +67,8 @@ export default class Game {
 
         // Set initial positions
         const startingPositions = settings.map.startingPositions;
-        this.players[0].position = startingPositions[0];
+        this.players[0].position = Object.assign({}, startingPositions[0]);
+        this.players[0].cellPosition = Object.assign({}, startingPositions[0]);
         this.players[0].speed = settings.initialSpeed;
 
     }
@@ -110,7 +111,7 @@ export default class Game {
         
         
         for (let player of this.players) {
-            if (initialPass || player.moving.x !== 0 || player.moving.y !== 0) {
+            if (initialPass || player.wantsToMove) {
                 player.graphic.clear();
                 player.graphic
                     .beginFill(0xEA4C46)
@@ -126,6 +127,10 @@ export default class Game {
                 }
             }
         }
+    }
+
+    renderBomb() {
+        
     }
 
     start() {
@@ -145,30 +150,59 @@ export default class Game {
         this.app.ticker.add(() => this.renderPlayers(true));
     }
 
-    canMoveX(player: Player): boolean {
-        let { x, y } = player.position;
-        x = Math.ceil(x);
-        y = Math.ceil(y);
-        return this.settings.map.getCell(y, x + player.moving.x) !== CellType.BRICK;
-    }
+    canMove(player: Player): boolean {
 
-    canMoveY(player: Player): boolean {
-        let { x, y } = player.position;
-        x = Math.ceil(x);
-        y = Math.ceil(y);
-        return this.settings.map.getCell(y + player.moving.y, x) !== CellType.BRICK;
+        if (player.inTransition) {
+            return false;
+        }
+
+        let { x, y } = player.cellPosition;
+        if (player.movingDirection === Direction.UP) {
+            y -= 1;
+        } else if (player.movingDirection === Direction.DOWN) {
+            y += 1;
+        } else if (player.movingDirection === Direction.LEFT) {
+            x -= 1;
+        } else if (player.movingDirection === Direction.RIGHT) {
+            x += 1;
+        }
+        return this.settings.map.getCell(y, x) !== CellType.BRICK;
     }
 
     fixedUpdate() {
 
         // Apply movement
         for (let player of this.players) {
-            console.log(player.position)
-            if (player.moving.x !== 0 && this.canMoveX(player)) {
-                player.position.x += player.moving.x * player.speed  / this.settings.tickrate;
+
+            if (!player.inTransition && player.wantsToMove && this.canMove(player)) {
+                player.moveTransitionPercent = 0;
+                player.moveTransitionDirection = player.movingDirection;
+                player.inTransition = true;
             }
-            if (player.moving.y !== 0  && this.canMoveY(player)) {
-                player.position.y += player.moving.y * player.speed / this.settings.tickrate;
+
+            if (player.inTransition) {  
+                player.moveTransitionPercent += player.speed  / this.settings.tickrate;
+                player.moveTransitionPercent = Math.min(player.moveTransitionPercent, 1);
+                console.log(player.moveTransitionPercent, player.cellPosition, player.position)
+
+
+                if (player.moveTransitionDirection === Direction.UP) {
+                    player.position.y = player.cellPosition.y - player.moveTransitionPercent;
+                } else if (player.moveTransitionDirection === Direction.DOWN) {
+                    player.position.y = player.cellPosition.y + player.moveTransitionPercent;
+                } else if (player.moveTransitionDirection === Direction.LEFT) {
+                    player.position.x = player.cellPosition.x - player.moveTransitionPercent;
+                } else if (player.moveTransitionDirection === Direction.RIGHT) {
+                    player.position.x = player.cellPosition.x + player.moveTransitionPercent;
+                }
+
+                if (player.moveTransitionPercent === 1) {
+                    player.inTransition = false;
+                    player.cellPosition = {
+                        x: Math.round(player.position.x),
+                        y: Math.round(player.position.y),
+                    };
+                }
             }
         }
     }

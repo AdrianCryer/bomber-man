@@ -1,5 +1,5 @@
 import Game from "./game";
-import Player from "./player";
+import Player, { Direction } from "./player";
 
 export interface PlayerController {
     setup: (view: Game, thisPlayer: Player) => void;
@@ -9,24 +9,32 @@ export class UserInputController implements PlayerController {
 
     setup(game: Game, thisPlayer: Player) {
         document.addEventListener('keydown', e => {
+            console.log(e)
             if (e.key === 'ArrowRight') {
-                thisPlayer.setMovingX(1);
+                thisPlayer.setMoving(Direction.RIGHT);
             } else if (e.key === 'ArrowLeft') {
-                thisPlayer.setMovingX(-1);
+                thisPlayer.setMoving(Direction.LEFT);
             } else if (e.key === 'ArrowUp') {
-                thisPlayer.setMovingY(-1);
+                thisPlayer.setMoving(Direction.UP);
             } else if (e.key === 'ArrowDown') {
-                thisPlayer.setMovingY(1);
+                thisPlayer.setMoving(Direction.DOWN);
+            } else if (e.code === 'Space') {
+                thisPlayer.placeBomb();
             }
         });
 
+        const keyMap : { [key: string]: Direction } = {
+            'ArrowRight': Direction.RIGHT,
+            'ArrowLeft': Direction.LEFT,
+            'ArrowUp': Direction.UP,
+            'ArrowDown': Direction.DOWN,
+        };
+
         document.addEventListener("keyup", e => {
-            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-                thisPlayer.setMovingX(0);
-            } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                thisPlayer.setMovingY(0);
-            } 
-        })
+            if (thisPlayer.wantsToMove && thisPlayer.movingDirection === keyMap[e.key]) {
+                thisPlayer.wantsToMove = false;
+            }
+        });
     }
 
 }

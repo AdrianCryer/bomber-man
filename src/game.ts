@@ -24,14 +24,17 @@ export type GameSettings = {
 
     // Tickrate to preform fixed updates (i.e., movement)
     tickrate: number;
+
+    // Percentage of brick spawns
+    brickSpawnPercentage: number;
 };
 
-type GameCell = {
-    powerups: any[];
-    bombs: Bomb[];
-    explosions: Explosion[];
-    hasBlock: boolean;
-};
+// type GameCell = {
+//     powerups: any[];
+//     bombs: Bomb[];
+//     explosions: Explosion[];
+//     hasBlock: boolean;
+// };
 
 type Explosion = {
     graphic: Graphics;
@@ -42,12 +45,22 @@ type Explosion = {
     timeCreated: number;
 };
 
+type Brick = GameCell & {
+    variant: 'soft' | 'hard';
+};
+
+type GameCell = {
+    graphic: Graphics;
+    type: CellType;
+}
+
 export default class Game {
 
     settings: GameSettings;
     app: PIXI.Application;
     explosions: Explosion[];
     players: Player[];
+    cells: GameCell[][];
     time: number;
 
     constructor(app: PIXI.Application, settings: GameSettings) {
@@ -56,6 +69,16 @@ export default class Game {
 
         // Set initial positions
         const startingPositions = settings.map.startingPositions;
+
+        // Setup grid
+        const { height, width} = this.settings.map.props;
+        this.cells = [];
+        for (let i = 0; i < height; i++) {
+            this.cells[i] = new Array(width);
+        }
+
+        this.loadMap();
+        this.spawnBricks();
 
         // Setup players
         this.players = [];
@@ -88,31 +111,71 @@ export default class Game {
         }
     }
 
-    private renderCell(x: number, y: number, width: number, type: CellType) {
-        const cell = new PIXI.Graphics();
-        const colour = (type === CellType.OPEN || type == CellType.SPAWN) ? 0x7bad56 : 0x999999;
-        cell.beginFill(colour)
+    private loadMap() {
+        const { height, width} = this.settings.map.props;
+        for (let i = 0; i < height; i++) {
+            for (let j = 0; j < width; j++) {
+                this.cells[i][j] = {
+                    graphic: new Graphics(),
+                    type: this.settings.map.getCell(i, j)
+                };
+            }
+        }
+    }
+
+    private spawnBricks() {
+        const { height, width } = this.settings.map.props;
+        for (let i = 0; i < height; i++) {
+            for (let j = 0; j < width; j++) {
+                if (this.cells[i][j].type === CellType.OPEN && Math.random() <= this.settings.brickSpawnPercentage) {
+                    this.cells[i][j] = {
+                        graphic: new Graphics(),
+                        type: CellType.BRICK,
+                        variant: Math.random() < 0.5 ? 'soft' : 'hard'
+                    } as Brick;
+                }
+            }
+        }
+
+        console.log(this.cells)
+        // Remove gap for players
+        // for (let spawnPosition of this.settings.map.startingPositions) {
+        //     this.cells[spawnPosition.y][spawnPosition.x] = {
+        //         graphic: new Graphics(),
+        //         type: CellType.SPAWN
+        //     };
+        // }
+    }
+
+    private renderCell(x: number, y: number, cell: GameCell) {
+
+        const cellWidth = Math.min(
+            this.app.screen.width / this.settings.map.props.width,
+            this.app.screen.height / this.settings.map.props.height,
+        );
+
+        let colour = 0x999999;
+        switch (cell.type) {
+            case (CellType.OPEN):
+            case (CellType.SPAWN):
+                colour = 0x7bad56;
+                break;
+            case (CellType.BRICK):
+                colour = 0xBC4A3C;
+                break;
+        }
+        cell.graphic.beginFill(colour)
             .lineStyle(1, 0xFFFFFF, 1)
-            .drawRect(x, y, width, width)
+            .drawRect(x * cellWidth, y * cellWidth, cellWidth, cellWidth)
             .endFill();
-        this.app.stage.addChild(cell);
+        this.app.stage.addChild(cell.graphic);
     }
 
     private renderGrid() {
         const { height: mapHeight, width: mapWidth } = this.settings.map.props;
-        const cellWidth = Math.min(
-            this.app.screen.width / mapWidth,
-            this.app.screen.height / mapHeight,
-        );
-
         for (let i = 0; i < mapHeight; i++) {
             for (let j = 0; j < mapWidth; j++) {
-                this.renderCell(
-                    j * cellWidth, 
-                    i * cellWidth, 
-                    cellWidth, 
-                    this.settings.map.getCell(i, j)
-                );
+                this.renderCell(j, i, this.cells[i][j]);
             }
         }
     }
@@ -195,13 +258,12 @@ export default class Game {
         explosion.graphic.clear();
         this.renderExplosionAtCell(explosion, x, y);
 
-
         while (i <= explosion.radius - 1 && !stopped.every(e => e == true)) {
             stopped = [
-                stopped[0] || x + i >= mapWidth || this.isBlocked(x + i , y),
-                stopped[1] || x - i < 0 || this.isBlocked(x - i , y),
-                stopped[2] || y + i >= mapHeight || this.isBlocked(x , y + i),
-                stopped[3] || y - i < 0 || this.isBlocked(x , y - i)
+                stopped[0] || x + i >= mapWidth || this.isBlocked({ x: x + i , y}),
+                stopped[1] || x - i < 0 || this.isBlocked({ x: x - i , y }),
+                stopped[2] || y + i >= mapHeight || this.isBlocked({ x , y: y + i }),
+                stopped[3] || y - i < 0 || this.isBlocked({ x , y: y - i })
             ];
             if (!stopped[0]) {
                 this.renderExplosionAtCell(explosion, x + i, y);
@@ -236,8 +298,9 @@ export default class Game {
         this.app.ticker.add(() => this.loop())
     }
 
-    isBlocked(x: number, y: number): boolean {
-        return this.settings.map.getCell(y, x) === CellType.BRICK;
+    isBlocked(position: Position): boolean {
+        const type = this.cells[position.y][position.x].type;
+        return type === CellType.SOLID || type === CellType.BRICK;
     }
 
     getNextCell(position: Position, direction: Direction): Position {
@@ -258,8 +321,7 @@ export default class Game {
         if (player.inTransition) {
             return false;
         }
-        let { x, y } = this.getNextCell(player.cellPosition, player.movingDirection);
-        return !this.isBlocked(x, y);
+        return !this.isBlocked(this.getNextCell(player.cellPosition, player.movingDirection));
     }
 
     fixedUpdate(time: number) {
@@ -287,7 +349,7 @@ export default class Game {
 
                     const closest = { x: Math.round(bomb.position.x), y: Math.round(bomb.position.y) };
                     const next = this.getNextCell(closest, bomb.slidingDirection);
-                    if (this.isBlocked(next.x, next.y) || shouldExplode) {
+                    if (this.isBlocked(next) || shouldExplode) {
                         if (Math.abs(bomb.position.x - closest.x) < delta && Math.abs(bomb.position.y - closest.y) < delta) {
                             bomb.isSliding = false;
                             bomb.position = closest;
@@ -306,14 +368,17 @@ export default class Game {
                         timeCreated: time,
                     });
 
+                    // Remove destroyed blocks / items
+                    
+
                     // Remove bomb
                     player.bombs.splice(i, 1);
                     this.app.stage.removeChild(bomb.graphic);
                 }
             }
 
+            // Handle explosions
             for (let [i, explosion] of this.explosions.entries()) {
-                // Remove Explosion
                 if (time >= explosion.timeCreated + explosion.duration * 1000) {
                     this.explosions.splice(i, 1);
                     this.app.stage.removeChild(explosion.graphic);
@@ -332,8 +397,13 @@ export default class Game {
                     for (let bomb of player.bombs) {
                         if (bomb.position.x === nextPos.x && bomb.position.y === nextPos.y) {
 
-                            bomb.isSliding = true;
-                            bomb.slidingDirection = player.moveTransitionDirection;
+                            // Check if bomb can slide
+                            const bombNextPos = this.getNextCell(bomb.position, player.moveTransitionDirection);
+                            if (!this.isBlocked(bombNextPos)) {
+
+                                bomb.isSliding = true;
+                                bomb.slidingDirection = player.moveTransitionDirection;
+                            }
                         }
                     }
                 }

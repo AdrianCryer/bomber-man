@@ -44,7 +44,7 @@ export default class GameMap {
         });
         for (let [i, row] of rows.entries()) {
             for (let [j, cell] of row.split(" ").entries()) {
-                let type: CellType = CellType.BRICK;
+                let type: CellType = CellType.SOLID;
                 switch (cell) {
                     case 'o':
                         type = CellType.OPEN;

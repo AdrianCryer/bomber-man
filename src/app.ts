@@ -21,7 +21,8 @@ async function run() {
         difficulty: 'easy',
         initialSpeed: 5,
         speedCap: 10,
-        tickrate: 64
+        tickrate: 64,
+        brickSpawnPercentage: 0.3
     };
 
     const game = new Game(app, settings);

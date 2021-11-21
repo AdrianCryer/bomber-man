@@ -17,17 +17,17 @@ document.getElementById("game").appendChild(app.view);
 
 // PIXI.settings.ROUND_PIXELS = true;
 // PIXI.settings.SCALE_MODE = SCALE_MODES.NEAREST;
-// PIXI.BaseTexture.SCALE_MODE = SCALE_MODES.NEAREST;
+PIXI.settings.SCALE_MODE = SCALE_MODES.NEAREST;
 
 app.loader.add("solid", "../assets/solid-sprite.png");
 app.loader.add("open", "../assets/open-sprite.png");
+app.loader.add("brick", "../assets/brick-sprite.png");
 app.loader.add("bomb", "../assets/bomb-spritesheet.json");
-app.loader.add("bomb-test", "../assets/bomb-sprite-test.png");
 app.loader.load(run);
 
 async function run() {
 
-    const mapString = await GameMap.loadMapFile(testMap);
+    const mapString = await GameMap.loadMapFile(retroMap);
     const settings: GameSettings = {
         map: GameMap.loadFromFile(mapString),
         bots: 2,

@@ -57,9 +57,13 @@ export default class Game {
     cells: GameCell[][];
     time: number;
 
+    cellsContainer: PIXI.Container;
+    itemsContainer: PIXI.Container;
+
     constructor(app: PIXI.Application, settings: GameSettings) {
         this.settings = settings;
         this.app = app;
+        app.stage.sortableChildren = true;
 
         // Set initial positions
         const startingPositions = settings.map.startingPositions;
@@ -109,41 +113,42 @@ export default class Game {
         const { height, width} = this.settings.map.props;
         for (let i = 0; i < height; i++) {
             for (let j = 0; j < width; j++) {
-
-                console.log(this.app.loader.resources)
-                const imageName = this.settings.map.getCell(i, j) === CellType.SOLID ? 'bomb-test' : 'open';
-                const texture = this.app.loader.resources[imageName].texture;
-                texture.baseTexture.scaleMode = PIXI.SCALE_MODES.LINEAR;
-
-                this.cells[i][j] = {
-                    graphic: new Sprite(texture),
-                    type: this.settings.map.getCell(i, j)
-                };
+                const imageName = this.settings.map.getCell(i, j) === CellType.SOLID ? 'solid' : 'open';
+                this.cells[i][j] = this.createCell(this.settings.map.getCell(i, j), imageName);;
             }
         }
+    }
+
+    createCell(cellType: CellType, spriteName: string): GameCell {
+        const texture = this.app.loader.resources[spriteName].texture;
+
+        let cell = {
+            graphic: new Sprite(texture),
+            type: cellType,
+        } as GameCell;
+
+        if (cellType === CellType.BRICK) {
+            cell = {
+                ...cell,
+                variant: Math.random() < 0.5 ? 'soft' : 'hard'
+            } as Brick;
+        }
+
+        return cell;
     }
 
     private spawnBricks() {
         const { height, width } = this.settings.map.props;
         for (let i = 0; i < height; i++) {
             for (let j = 0; j < width; j++) {
-                // if (this.cells[i][j].type === CellType.OPEN && Math.random() <= this.settings.brickSpawnPercentage) {
-                //     this.cells[i][j] = {
-                //         graphic: PIXI.BaseTexture.from(this.app.loader.resources['open'].url),
-                //         type: CellType.BRICK,
-                //         variant: Math.random() < 0.5 ? 'soft' : 'hard'
-                //     } as Brick;
-                // }
+
+                if (this.cells[i][j].type === CellType.OPEN && 
+                    Math.random() <= this.settings.brickSpawnPercentage) {
+
+                    this.cells[i][j] = this.createCell(CellType.BRICK, 'brick');
+                }
             }
         }
-
-        // Remove gap for players
-        // for (let spawnPosition of this.settings.map.startingPositions) {
-        //     this.cells[spawnPosition.y][spawnPosition.x] = {
-        //         graphic: new Graphics(),
-        //         type: CellType.SPAWN
-        //     };
-        // }
     }
 
     private renderCell(x: number, y: number, cell: GameCell, intialPass=true) {
@@ -163,16 +168,17 @@ export default class Game {
                 colour = 0xBC4A3C;
                 break;
         }
+
+        cell.graphic.texture.baseTexture.scaleMode = PIXI.SCALE_MODES.NEAREST;
+
         cell.graphic.position.x = x * cellWidth;
         cell.graphic.position.y = y * cellWidth;
-        // cell.graphic.scale.set(5, 5);
-        // cell.graphic.width = cellWidth;
-        // cell.graphic.height = cellWidth;
-        // cell.graphic.beginFill(colour)
-        //     .lineStyle(1, 0xFFFFFF, 1)
-        //     .drawRect(x * cellWidth, y * cellWidth, cellWidth, cellWidth)
-        //     .endFill();
+        cell.graphic.width = cellWidth;
+        cell.graphic.height = cellWidth;
+
         if (intialPass) {
+
+            cell.graphic.zIndex = 0;
             this.app.stage.addChild(cell.graphic);
         }
     }
@@ -207,6 +213,7 @@ export default class Game {
                 .endFill();
             // }
             if (initialPass) {
+                player.graphic.zIndex = 1;
                 this.app.stage.addChild(player.graphic);
             }
         }
@@ -228,19 +235,22 @@ export default class Game {
         //         cellWidth / 3
         //     )
         //     .endFill();
+
         if (!bomb.addedToCanvas) {
             bomb.addedToCanvas = true;
             const sheet = this.app.loader.resources['bomb'].spritesheet;
             bomb.graphic = new PIXI.AnimatedSprite(sheet.animations['exploding']);
-            bomb.graphic.position.x = bomb.position.x * cellWidth;
-            bomb.graphic.position.y = bomb.position.y * cellWidth;
             bomb.graphic.width = cellWidth;
             bomb.graphic.height = cellWidth;
             bomb.graphic.animationSpeed = 0.3; 
             bomb.graphic.play();
+            bomb.graphic.zIndex = 1;
 
             this.app.stage.addChild(bomb.graphic);
         }
+        
+        bomb.graphic.position.x = bomb.position.x * cellWidth;
+        bomb.graphic.position.y = bomb.position.y * cellWidth;
     }
 
     private renderExplosionAtCell(explosion: Explosion, x: number, y: number) {
@@ -314,13 +324,13 @@ export default class Game {
         for (let cellPos of explosion.affectedCells) {
             let cell = this.cells[cellPos.y][cellPos.x];
             if (cell.type === CellType.BRICK) {
+                
+                this.app.stage.removeChild(cell.graphic);
+                this.cells[cellPos.y][cellPos.x] = this.createCell(CellType.OPEN, 'open');
 
-                cell.type = CellType.OPEN;
-                this.cells[cellPos.y][cellPos.x] = cell as GameCell;
-                console.log("REMOVED", cell, cellPos)
 
                 // Rerender
-                this.renderCell(cellPos.x, cellPos.y, cell, false);
+                this.renderCell(cellPos.x, cellPos.y, this.cells[cellPos.y][cellPos.x], true);
             }
         }
     }

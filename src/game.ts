@@ -200,7 +200,6 @@ export default class Game {
         );
         
         for (let player of this.players) {
-            // if (player.wantsToMove) {
             player.graphic.clear();
             player.graphic
                 .beginFill(0xEA4C46)
@@ -211,7 +210,6 @@ export default class Game {
                     cellWidth / 2
                 )
                 .endFill();
-            // }
             if (initialPass) {
                 player.graphic.zIndex = 1;
                 this.app.stage.addChild(player.graphic);
@@ -225,16 +223,6 @@ export default class Game {
             this.app.screen.width / mapWidth,
             this.app.screen.height / mapHeight,
         );
-
-        // bomb.graphic.clear();
-        // bomb.graphic
-        //     .beginFill(0x3A3B3C)
-        //     .drawCircle(
-        //         (0.5 + bomb.position.x) * cellWidth,
-        //         (0.5 + bomb.position.y) * cellWidth,
-        //         cellWidth / 3
-        //     )
-        //     .endFill();
 
         if (!bomb.addedToCanvas) {
             bomb.addedToCanvas = true;
@@ -285,7 +273,7 @@ export default class Game {
 
         const { height, width } = this.settings.map.props;
         let { x, y } = centre;
-        let i = 0;
+        let i = 1;
         let stopped = Array(4).fill(false).slice();
         let affectedCells: Position[] = [Object.assign({}, centre)];
 
@@ -293,7 +281,7 @@ export default class Game {
             if (this.cells[nextPos.y][nextPos.x].type === CellType.BRICK) {
                 affectedCells.push(nextPos);
                 stopped[dirIndex] = true;
-            } else if (this.isBlocked(nextPos)) {
+            } else if (this.isBlockedCell(nextPos)) {
                 stopped[dirIndex] = true;
             } else {
                 affectedCells.push(nextPos);
@@ -328,7 +316,6 @@ export default class Game {
                 this.app.stage.removeChild(cell.graphic);
                 this.cells[cellPos.y][cellPos.x] = this.createCell(CellType.OPEN, 'open');
 
-
                 // Rerender
                 this.renderCell(cellPos.x, cellPos.y, this.cells[cellPos.y][cellPos.x], true);
             }
@@ -352,9 +339,24 @@ export default class Game {
         this.app.ticker.add(() => this.loop())
     }
 
-    isBlocked(position: Position): boolean {
+    isBlockedCell(position: Position): boolean {
         const type = this.cells[position.y][position.x].type;
-        return type === CellType.SOLID || type === CellType.BRICK;
+        if (type === CellType.SOLID || type === CellType.BRICK) {
+            return true;
+        }
+        return this.positionContainsBomb(position);
+    }
+
+    positionContainsBomb(position: Position): boolean {
+        for (let player of this.players) {
+            for (let bombs of player.bombs) {
+                if (position.x === Math.round(bombs.position.x) && 
+                    position.y === Math.round(bombs.position.y)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     getNextCell(position: Position, direction: Direction): Position {
@@ -372,10 +374,18 @@ export default class Game {
     }
 
     canMove(player: Player): boolean {
-        if (player.inTransition) {
+
+        const nextPos = this.getNextCell(player.position, player.movingDirection);
+        if (this.isBlockedCell(nextPos)) {
+
+            // Check if we can slide the bomb
+            if (this.positionContainsBomb(nextPos)) {
+                const bombNextPos = this.getNextCell(nextPos, player.movingDirection);
+                return !this.isBlockedCell(bombNextPos);
+            }
             return false;
         }
-        return !this.isBlocked(this.getNextCell(player.cellPosition, player.movingDirection));
+        return true;
     }
 
     fixedUpdate(time: number) {
@@ -403,7 +413,7 @@ export default class Game {
 
                     const closest = { x: Math.round(bomb.position.x), y: Math.round(bomb.position.y) };
                     const next = this.getNextCell(closest, bomb.slidingDirection);
-                    if (this.isBlocked(next) || shouldExplode) {
+                    if (this.isBlockedCell(next) || shouldExplode) {
                         if (Math.abs(bomb.position.x - closest.x) < delta && Math.abs(bomb.position.y - closest.y) < delta) {
                             bomb.isSliding = false;
                             bomb.position = closest;
@@ -456,7 +466,7 @@ export default class Game {
 
                             // Check if bomb can slide
                             const bombNextPos = this.getNextCell(bomb.position, player.moveTransitionDirection);
-                            if (!this.isBlocked(bombNextPos)) {
+                            if (!this.isBlockedCell(bombNextPos)) {
 
                                 bomb.isSliding = true;
                                 bomb.slidingDirection = player.moveTransitionDirection;

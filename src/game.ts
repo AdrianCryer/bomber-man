@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { Graphics } from "pixi.js";
+import { Graphics, Sprite } from "pixi.js";
 import GameMap, { CellType } from "./game-map";
 import Player, { Bomb, Direction } from "./player";
 import { UserInputController } from "./player-controller";
@@ -44,7 +44,7 @@ type Brick = GameCell & {
 };
 
 type GameCell = {
-    graphic: Graphics;
+    graphic: PIXI.Sprite;
     type: CellType;
 }
 
@@ -109,8 +109,14 @@ export default class Game {
         const { height, width} = this.settings.map.props;
         for (let i = 0; i < height; i++) {
             for (let j = 0; j < width; j++) {
+
+                console.log(this.app.loader.resources)
+                const imageName = this.settings.map.getCell(i, j) === CellType.SOLID ? 'bomb-test' : 'open';
+                const texture = this.app.loader.resources[imageName].texture;
+                texture.baseTexture.scaleMode = PIXI.SCALE_MODES.LINEAR;
+
                 this.cells[i][j] = {
-                    graphic: new Graphics(),
+                    graphic: new Sprite(texture),
                     type: this.settings.map.getCell(i, j)
                 };
             }
@@ -121,17 +127,16 @@ export default class Game {
         const { height, width } = this.settings.map.props;
         for (let i = 0; i < height; i++) {
             for (let j = 0; j < width; j++) {
-                if (this.cells[i][j].type === CellType.OPEN && Math.random() <= this.settings.brickSpawnPercentage) {
-                    this.cells[i][j] = {
-                        graphic: new Graphics(),
-                        type: CellType.BRICK,
-                        variant: Math.random() < 0.5 ? 'soft' : 'hard'
-                    } as Brick;
-                }
+                // if (this.cells[i][j].type === CellType.OPEN && Math.random() <= this.settings.brickSpawnPercentage) {
+                //     this.cells[i][j] = {
+                //         graphic: PIXI.BaseTexture.from(this.app.loader.resources['open'].url),
+                //         type: CellType.BRICK,
+                //         variant: Math.random() < 0.5 ? 'soft' : 'hard'
+                //     } as Brick;
+                // }
             }
         }
 
-        console.log(this.cells)
         // Remove gap for players
         // for (let spawnPosition of this.settings.map.startingPositions) {
         //     this.cells[spawnPosition.y][spawnPosition.x] = {
@@ -158,10 +163,15 @@ export default class Game {
                 colour = 0xBC4A3C;
                 break;
         }
-        cell.graphic.beginFill(colour)
-            .lineStyle(1, 0xFFFFFF, 1)
-            .drawRect(x * cellWidth, y * cellWidth, cellWidth, cellWidth)
-            .endFill();
+        cell.graphic.position.x = x * cellWidth;
+        cell.graphic.position.y = y * cellWidth;
+        // cell.graphic.scale.set(5, 5);
+        // cell.graphic.width = cellWidth;
+        // cell.graphic.height = cellWidth;
+        // cell.graphic.beginFill(colour)
+        //     .lineStyle(1, 0xFFFFFF, 1)
+        //     .drawRect(x * cellWidth, y * cellWidth, cellWidth, cellWidth)
+        //     .endFill();
         if (intialPass) {
             this.app.stage.addChild(cell.graphic);
         }
@@ -209,18 +219,27 @@ export default class Game {
             this.app.screen.height / mapHeight,
         );
 
-        bomb.graphic.clear();
-        bomb.graphic
-            .beginFill(0x3A3B3C)
-            .drawCircle(
-                (0.5 + bomb.position.x) * cellWidth,
-                (0.5 + bomb.position.y) * cellWidth,
-                cellWidth / 3
-            )
-            .endFill();
+        // bomb.graphic.clear();
+        // bomb.graphic
+        //     .beginFill(0x3A3B3C)
+        //     .drawCircle(
+        //         (0.5 + bomb.position.x) * cellWidth,
+        //         (0.5 + bomb.position.y) * cellWidth,
+        //         cellWidth / 3
+        //     )
+        //     .endFill();
         if (!bomb.addedToCanvas) {
-            this.app.stage.addChild(bomb.graphic);
             bomb.addedToCanvas = true;
+            const sheet = this.app.loader.resources['bomb'].spritesheet;
+            bomb.graphic = new PIXI.AnimatedSprite(sheet.animations['exploding']);
+            bomb.graphic.position.x = bomb.position.x * cellWidth;
+            bomb.graphic.position.y = bomb.position.y * cellWidth;
+            bomb.graphic.width = cellWidth;
+            bomb.graphic.height = cellWidth;
+            bomb.graphic.animationSpeed = 0.3; 
+            bomb.graphic.play();
+
+            this.app.stage.addChild(bomb.graphic);
         }
     }
 

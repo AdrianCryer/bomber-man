@@ -1,4 +1,4 @@
-import { Graphics, graphicsUtils } from "pixi.js";
+import { AnimatedSprite, Graphics, graphicsUtils } from "pixi.js";
 import { Position } from "./types";
 import { PlayerController } from "./player-controller";
 
@@ -19,7 +19,7 @@ type PlayerConfiguration = {
 };
 
 export type Bomb = {
-    graphic: Graphics;
+    graphic: AnimatedSprite;
     addedToCanvas: boolean;
     timePlaced: number;
     timer: number;
@@ -87,7 +87,7 @@ export default class Player {
     placeBomb() {
 
         this.bombs.push({
-            graphic: new Graphics(),
+            graphic: null,
             position: { x: Math.round(this.position.x), y: Math.round(this.position.y) },
             explosionRadius: this.bombExplosionRadius,
             explosionDuration: this.bombExplosionDuration,

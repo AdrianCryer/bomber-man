@@ -145,7 +145,7 @@ export default class Game {
                 if (this.cells[i][j].type === CellType.OPEN && 
                     Math.random() <= this.settings.brickSpawnPercentage) {
 
-                    this.cells[i][j] = this.createCell(CellType.BRICK, 'brick');
+                    // this.cells[i][j] = this.createCell(CellType.BRICK, 'brick');
                 }
             }
         }
@@ -281,7 +281,7 @@ export default class Game {
             if (this.cells[nextPos.y][nextPos.x].type === CellType.BRICK) {
                 affectedCells.push(nextPos);
                 stopped[dirIndex] = true;
-            } else if (this.isBlockedCell(nextPos)) {
+            } else if (this.positionIsBlocked(nextPos)) {
                 stopped[dirIndex] = true;
             } else {
                 affectedCells.push(nextPos);
@@ -339,24 +339,30 @@ export default class Game {
         this.app.ticker.add(() => this.loop())
     }
 
-    isBlockedCell(position: Position): boolean {
-        const type = this.cells[position.y][position.x].type;
-        if (type === CellType.SOLID || type === CellType.BRICK) {
-            return true;
-        }
-        return this.positionContainsBomb(position);
+    positionIsTraversable(position: Position): boolean {
+        return !this.positionIsBlocked(position) && !this.positionContainsBomb(position);
     }
 
     positionContainsBomb(position: Position): boolean {
+        return this.getBombsAtPosition(position).length > 0;
+    }
+
+    positionIsBlocked(position: Position): boolean {
+        const type = this.cells[position.y][position.x].type;
+        return type === CellType.SOLID || type === CellType.BRICK;
+    }
+
+    getBombsAtPosition(position: Position): Bomb[] {
+        let bombs = [];
         for (let player of this.players) {
-            for (let bombs of player.bombs) {
-                if (position.x === Math.round(bombs.position.x) && 
-                    position.y === Math.round(bombs.position.y)) {
-                    return true;
+            for (let bomb of player.bombs) {
+                if (position.x === Math.round(bomb.position.x) && 
+                    position.y === Math.round(bomb.position.y)) {
+                    bombs.push(bomb);
                 }
             }
         }
-        return false;
+        return bombs;
     }
 
     getNextCell(position: Position, direction: Direction): Position {
@@ -371,21 +377,6 @@ export default class Game {
             x += 1;
         }
         return { x, y };
-    }
-
-    canMove(player: Player): boolean {
-
-        const nextPos = this.getNextCell(player.position, player.movingDirection);
-        if (this.isBlockedCell(nextPos)) {
-
-            // Check if we can slide the bomb
-            if (this.positionContainsBomb(nextPos)) {
-                const bombNextPos = this.getNextCell(nextPos, player.movingDirection);
-                return !this.isBlockedCell(bombNextPos);
-            }
-            return false;
-        }
-        return true;
     }
 
     fixedUpdate(time: number) {
@@ -413,8 +404,13 @@ export default class Game {
 
                     const closest = { x: Math.round(bomb.position.x), y: Math.round(bomb.position.y) };
                     const next = this.getNextCell(closest, bomb.slidingDirection);
-                    if (this.isBlockedCell(next) || shouldExplode) {
-                        if (Math.abs(bomb.position.x - closest.x) < delta && Math.abs(bomb.position.y - closest.y) < delta) {
+
+                    console.log(shouldExplode)
+                    if (shouldExplode || 
+                        (closest.x !== bomb.position.x || closest.y !== bomb.position.y) &&
+                        !this.positionIsTraversable(next)) {
+                        
+                        if (Math.abs(bomb.position.x - closest.x) <= delta && Math.abs(bomb.position.y - closest.y) <= delta) {
                             bomb.isSliding = false;
                             bomb.position = closest;
                         }
@@ -453,25 +449,31 @@ export default class Game {
             }
 
             // Apply movement
-            if (!player.inTransition && player.wantsToMove && this.canMove(player)) {
-                player.moveTransitionPercent = 0;
-                player.moveTransitionDirection = player.movingDirection;
-                player.inTransition = true;
+            if (!player.inTransition && player.wantsToMove) {
 
-                // If target cell contains bomb, slide
-                const nextPos = this.getNextCell(player.position, player.moveTransitionDirection);
-                for (let player of this.players) {
-                    for (let bomb of player.bombs) {
-                        if (bomb.position.x === nextPos.x && bomb.position.y === nextPos.y) {
+                const nextPos = this.getNextCell(player.position, player.movingDirection);
+                if (!this.positionIsBlocked(nextPos)) {
+                    
+                    let canMove = true;
+                    const bombs = this.getBombsAtPosition(nextPos);
 
-                            // Check if bomb can slide
-                            const bombNextPos = this.getNextCell(bomb.position, player.moveTransitionDirection);
-                            if (!this.isBlockedCell(bombNextPos)) {
+                    // Position contains bomb: can only move if can slide bomb
+                    if (bombs.length > 0) {
+                        const bombNextPos = this.getNextCell(nextPos, player.movingDirection);
+                        canMove = this.positionIsTraversable(bombNextPos);
 
+                        if (canMove) {
+                            for (let bomb of bombs) {
                                 bomb.isSliding = true;
-                                bomb.slidingDirection = player.moveTransitionDirection;
+                                bomb.slidingDirection = player.movingDirection;
                             }
                         }
+                    }
+
+                    if (canMove) {
+                        player.moveTransitionPercent = 0;
+                        player.moveTransitionDirection = player.movingDirection;
+                        player.inTransition = true;
                     }
                 }
             }

@@ -1,0 +1,69 @@
+{
+    "frames": {
+        "explosion-centre-1": {
+            "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 48,
+                "h": 45
+            },
+            "rotated": false,
+            "trimmed": false,
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 48,
+                "h": 45
+            },
+            "sourceSize": {
+                "w": 48,
+                "h": 45
+            }
+        },
+        "explosion-base-1": {
+            "frame": {
+                "x": 0,
+                "y": 48,
+                "w": 48,
+                "h": 45
+            },
+            "rotated": false,
+            "trimmed": false,
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 48,
+                "h": 45
+            },
+            "sourceSize": {
+                "w": 48,
+                "h": 45
+            }
+        },
+        "explosion-end-1": {
+            "frame": {
+                "x": 0,
+                "y": 90,
+                "w": 48,
+                "h": 42
+            },
+            "rotated": false,
+            "trimmed": false,
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 48,
+                "h": 45
+            },
+            "sourceSize": {
+                "w": 48,
+                "h": 45
+            }
+        }
+    },
+    "meta": {
+		"image": "explosion.png",
+		"size": {"w":336, "h":134},
+		"scale": "1"
+	}
+}

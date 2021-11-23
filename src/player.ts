@@ -3,10 +3,10 @@ import { Position } from "./types";
 import { PlayerController } from "./player-controller";
 
 export enum Direction {
-    UP,
-    DOWN,
-    LEFT,
-    RIGHT
+    UP = 0,
+    RIGHT = 1,
+    DOWN = 2,
+    LEFT = 3,
 };
 
 type PlayerConfiguration = {

@@ -36,7 +36,17 @@ type Explosion = {
     radius: number;
     duration: number;
     timeCreated: number;
-    affectedCells: Position[];
+    affectedCells: ExplosionCell[];
+};
+
+type ExplosionCell = {
+    graphic: Sprite;
+    direction: Direction;
+    position: Position;
+    intensity: number;
+    isEnd: boolean;
+    isCentre: boolean;
+    addedToCanvas: boolean;
 };
 
 type Brick = GameCell & {
@@ -92,7 +102,7 @@ export default class Game {
                 speed: settings.initialSpeed,
                 bombCount: 1,
                 bombExplosionRadius: 5,
-                bombExplosionDuration: 1,
+                bombExplosionDuration: 10,
                 bombTimer: 5
             }
         ));
@@ -144,7 +154,6 @@ export default class Game {
 
                 if (this.cells[i][j].type === CellType.OPEN && 
                     Math.random() <= this.settings.brickSpawnPercentage) {
-
                     // this.cells[i][j] = this.createCell(CellType.BRICK, 'brick');
                 }
             }
@@ -248,6 +257,7 @@ export default class Game {
             this.app.screen.height / mapHeight,
         );
         
+
         explosion.graphic
             .beginFill(0xB53737)
             .drawRect(
@@ -262,62 +272,120 @@ export default class Game {
         }
     }
 
+    private renderExplosionCell(explosionCell: ExplosionCell) {
+        const { height: mapHeight, width: mapWidth } = this.settings.map.props;
+        const cellWidth = Math.min(
+            this.app.screen.width / mapWidth,
+            this.app.screen.height / mapHeight,
+        );
+
+        if (!explosionCell.addedToCanvas) {
+            explosionCell.addedToCanvas = true;
+            const sheet = this.app.loader.resources['explosion'].spritesheet;
+            console.log(sheet)
+            let code = 'base';
+            if (explosionCell.isCentre) {
+                code = 'centre';
+            } else if (explosionCell.isEnd) {
+                code = 'end';
+            }
+
+            const texture = sheet.textures[`explosion-${code}-${explosionCell.intensity}`];
+            explosionCell.graphic = new PIXI.Sprite(texture);
+            explosionCell.graphic.width = cellWidth;
+            explosionCell.graphic.height = cellWidth;
+            explosionCell.graphic.zIndex = 1;
+                        
+            explosionCell.graphic.pivot.set(
+                texture.width / 2, 
+                texture.height / 2
+            )
+            explosionCell.graphic.angle = (explosionCell.direction + 1) * 90 % 360;
+            explosionCell.graphic.position.set(
+                (0.5 + explosionCell.position.x) * cellWidth,
+                (0.5 + explosionCell.position.y) * cellWidth,
+            )
+
+
+            this.app.stage.addChild(explosionCell.graphic);
+        }
+
+        // explosionCell.graphic.position.x = explosionCell.position.x * cellWidth;
+        // explosionCell.graphic.position.y = explosionCell.position.y * cellWidth;
+    }
+
     renderExplosion(explosion: Explosion) {
-        explosion.graphic.clear();
-        for (let cellPos of explosion.affectedCells) {
-            this.renderExplosionAtCell(explosion, cellPos.x, cellPos.y);
+        // explosion.graphic.clear();
+        for (let explosionCell of explosion.affectedCells) {
+            this.renderExplosionCell(explosionCell);
+            // const pos = explosionCell.position;
+            // this.renderExplosionAtCell(explosion, pos.x, pos.y);
         }
     }
 
-    getCellsAffectedByExplosion(centre: Position, radius: number): Position[] {
+    getCellsAffectedByExplosion(centre: Position, radius: number, power: number): ExplosionCell[] {
 
-        const { height, width } = this.settings.map.props;
         let { x, y } = centre;
         let i = 1;
         let stopped = Array(4).fill(false).slice();
-        let affectedCells: Position[] = [Object.assign({}, centre)];
+        let affectedCells: ExplosionCell[] = [{
+            graphic: null,
+            intensity: power,
+            position: Object.assign({}, centre),
+            isEnd: false,
+            isCentre: true,
+            direction: -1,
+            addedToCanvas: false
+        }];
 
-        const handleNextCell = (dirIndex: number, nextPos: Position) => {
+        const handleNextCell = (direction: Direction, nextPos: Position) => {
+
+            if (stopped[direction] || !this.positionIsInBounds(nextPos)) {
+                return;
+            }
+
+            let cell = {
+                graphic: null as PIXI.Sprite,
+                direction,
+                position: nextPos,
+                intensity: power,
+                isCentre: false,
+                addedToCanvas: false
+            };
+
             if (this.cells[nextPos.y][nextPos.x].type === CellType.BRICK) {
-                affectedCells.push(nextPos);
-                stopped[dirIndex] = true;
+                affectedCells.push({...cell, isEnd: true});
+                stopped[direction] = true;
             } else if (this.positionIsBlocked(nextPos)) {
-                stopped[dirIndex] = true;
+                stopped[direction] = true;
             } else {
-                affectedCells.push(nextPos);
+                affectedCells.push({...cell, isEnd: (i === radius - 1)});
             }
         }
 
         while (i < radius && !stopped.every(e => e == true)) {
-
-            if (!stopped[0] && x + i < width) {
-                handleNextCell(0, { x: x + i, y });
-            }
-            if (!stopped[1] && x - i >= 0) {
-                handleNextCell(1, { x: x - i, y });
-            }
-            if (!stopped[2] && y + i < height) {
-                handleNextCell(2, { x, y: y + i });
-            }
-            if (!stopped[3] && y - i >= 0) {
-                handleNextCell(3, { x, y: y - i });
-            }
+            handleNextCell(Direction.RIGHT, { x: x + i, y });
+            handleNextCell(Direction.LEFT, { x: x - i, y });
+            handleNextCell(Direction.DOWN, { x, y: y + i });
+            handleNextCell(Direction.UP, { x, y: y - i });
             i++;
         }
 
+        console.log(affectedCells);
         return affectedCells;
     }
 
     handleExplosion(explosion: Explosion) {
-        for (let cellPos of explosion.affectedCells) {
-            let cell = this.cells[cellPos.y][cellPos.x];
+        for (let explosionCell of explosion.affectedCells) {
+            let pos = explosionCell.position;
+            let cell = this.cells[pos.y][pos.x];
             if (cell.type === CellType.BRICK) {
                 
                 this.app.stage.removeChild(cell.graphic);
-                this.cells[cellPos.y][cellPos.x] = this.createCell(CellType.OPEN, 'open');
+                this.cells[pos.y][pos.x] = this.createCell(CellType.OPEN, 'open');
 
                 // Rerender
-                this.renderCell(cellPos.x, cellPos.y, this.cells[cellPos.y][cellPos.x], true);
+                this.renderCell(pos.x, pos.y, this.cells[pos.y][pos.x], true);
             }
         }
     }
@@ -337,6 +405,11 @@ export default class Game {
         });
         this.renderPlayers(true);
         this.app.ticker.add(() => this.loop())
+    }
+
+    positionIsInBounds(position: Position): boolean {
+        const { width, height } = this.settings.map.props;
+        return 0 <= position.x && position.x < width && 0 <= position.y && position.y < height;
     }
 
     positionIsTraversable(position: Position): boolean {
@@ -405,7 +478,6 @@ export default class Game {
                     const closest = { x: Math.round(bomb.position.x), y: Math.round(bomb.position.y) };
                     const next = this.getNextCell(closest, bomb.slidingDirection);
 
-                    console.log(shouldExplode)
                     if (shouldExplode || 
                         (closest.x !== bomb.position.x || closest.y !== bomb.position.y) &&
                         !this.positionIsTraversable(next)) {
@@ -426,7 +498,7 @@ export default class Game {
                         center: bomb.position,
                         radius: bomb.explosionRadius,
                         duration: bomb.explosionDuration,
-                        affectedCells: this.getCellsAffectedByExplosion(bomb.position, bomb.explosionRadius),
+                        affectedCells: this.getCellsAffectedByExplosion(bomb.position, bomb.explosionRadius, 1),
                         timeCreated: time,
                     };
                     

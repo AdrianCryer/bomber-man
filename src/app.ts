@@ -23,6 +23,7 @@ app.loader.add("solid", "../assets/solid-sprite.png");
 app.loader.add("open", "../assets/open-sprite.png");
 app.loader.add("brick", "../assets/brick-sprite.png");
 app.loader.add("bomb", "../assets/bomb-spritesheet.json");
+app.loader.add("explosion", "../assets/explosion-spritesheet.json");
 app.loader.load(run);
 
 async function run() {

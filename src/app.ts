@@ -1,11 +1,12 @@
 import * as PIXI from "pixi.js";
-import Game, { GameSettings } from "./game"; 
+import Game from "./game"; 
 import GameMap from "./game-map";
 
 import basicMap from "../maps/basic.txt";
 import retroMap from "../maps/retro.txt";
 import testMap from "../maps/test.txt";
 import { SCALE_MODES } from "pixi.js";
+import { GameSettings } from "./types";
 
 const app = new PIXI.Application({
     width: 1600,
@@ -24,6 +25,7 @@ app.loader.add("open", "../assets/open-sprite.png");
 app.loader.add("brick", "../assets/brick-sprite.png");
 app.loader.add("bomb", "../assets/bomb-spritesheet.json");
 app.loader.add("explosion", "../assets/explosion-spritesheet.json");
+app.loader.add('04B_30__', '../assets/fonts/04B_30__.TTF');
 app.loader.load(run);
 
 async function run() {
@@ -31,7 +33,7 @@ async function run() {
     const mapString = await GameMap.loadMapFile(retroMap);
     const settings: GameSettings = {
         map: GameMap.loadFromFile(mapString),
-        bots: 2,
+        bots: 1,
         difficulty: 'easy',
         initialSpeed: 5,
         speedCap: 10,

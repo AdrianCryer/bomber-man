@@ -2,32 +2,8 @@ import * as PIXI from "pixi.js";
 import { Graphics, Sprite } from "pixi.js";
 import GameMap, { CellType } from "./game-map";
 import Player, { Bomb, Direction } from "./player";
-import { UserInputController } from "./player-controller";
-import { Position } from "./types";
-
-export type GameSettings = {
-
-    // The map to play
-    map: GameMap;
-
-    // Number of bots in the game
-    bots: number;
-
-    // Bot difficulty
-    difficulty: 'easy' | 'medium' | 'hard';
-
-    // Starting speed of all players
-    initialSpeed: number;
-
-    // Blocks per second
-    speedCap: number;
-
-    // Tickrate to preform fixed updates (i.e., movement)
-    tickrate: number;
-
-    // Percentage of brick spawns
-    brickSpawnPercentage: number;
-};
+import { RandomAIInputController, UserInputController } from "./player-controller";
+import { GameSettings, Position } from "./types";
 
 type Explosion = {
     graphic: Graphics;
@@ -71,12 +47,14 @@ export default class Game {
     itemsContainer: PIXI.Container;
 
     constructor(app: PIXI.Application, settings: GameSettings) {
+        
         this.settings = settings;
         this.app = app;
         app.stage.sortableChildren = true;
 
         // Set initial positions
         const startingPositions = settings.map.startingPositions;
+        console.log(startingPositions)
 
         // Setup grid
         const { height, width} = this.settings.map.props;
@@ -102,18 +80,31 @@ export default class Game {
                 speed: settings.initialSpeed,
                 bombCount: 1,
                 bombExplosionRadius: 5,
-                bombExplosionDuration: 10,
-                bombTimer: 5
+                bombExplosionDuration: 1,
+                bombTimer: 3
             }
         ));
 
         // Add bots
-        // for (let i = 0; i < settings.bots; i++) {
-        //     this.players.push(
+        for (let i = 0; i < settings.bots; i++) {
+            this.players.push(
+                new Player(
+                    i + 1,
+                    new Graphics(),
+                    new RandomAIInputController(),
+                    {
+                        position: settings.map.startingPositions[i + 1],
+                        speed: settings.initialSpeed,
+                        bombCount: 1,
+                        bombExplosionRadius: 5,
+                        bombExplosionDuration: 1,
+                        bombTimer: 3
+                    }
+                )
+            )
+        } 
 
-        //     )
-        // } 
-        
+        console.log(this.players);
         for (let player of this.players) {
             player.controller.setup(this, player);
         }
@@ -154,7 +145,7 @@ export default class Game {
 
                 if (this.cells[i][j].type === CellType.OPEN && 
                     Math.random() <= this.settings.brickSpawnPercentage) {
-                    // this.cells[i][j] = this.createCell(CellType.BRICK, 'brick');
+                    this.cells[i][j] = this.createCell(CellType.BRICK, 'brick');
                 }
             }
         }
@@ -299,8 +290,14 @@ export default class Game {
             explosionCell.graphic.pivot.set(
                 texture.width / 2, 
                 texture.height / 2
-            )
-            explosionCell.graphic.angle = (explosionCell.direction + 1) * 90 % 360;
+            );
+            if (explosionCell.direction === Direction.UP) {
+                explosionCell.graphic.angle = 270;
+            }
+            if (explosionCell.direction === Direction.DOWN) {
+                explosionCell.graphic.angle = 90;
+            }
+
             explosionCell.graphic.position.set(
                 (0.5 + explosionCell.position.x) * cellWidth,
                 (0.5 + explosionCell.position.y) * cellWidth,
@@ -309,17 +306,11 @@ export default class Game {
 
             this.app.stage.addChild(explosionCell.graphic);
         }
-
-        // explosionCell.graphic.position.x = explosionCell.position.x * cellWidth;
-        // explosionCell.graphic.position.y = explosionCell.position.y * cellWidth;
     }
 
     renderExplosion(explosion: Explosion) {
-        // explosion.graphic.clear();
         for (let explosionCell of explosion.affectedCells) {
             this.renderExplosionCell(explosionCell);
-            // const pos = explosionCell.position;
-            // this.renderExplosionAtCell(explosion, pos.x, pos.y);
         }
     }
 
@@ -498,7 +489,7 @@ export default class Game {
                         center: bomb.position,
                         radius: bomb.explosionRadius,
                         duration: bomb.explosionDuration,
-                        affectedCells: this.getCellsAffectedByExplosion(bomb.position, bomb.explosionRadius, 1),
+                        affectedCells: this.getCellsAffectedByExplosion(bomb.position, bomb.explosionRadius, 2),
                         timeCreated: time,
                     };
                     
@@ -516,7 +507,9 @@ export default class Game {
             for (let [i, explosion] of this.explosions.entries()) {
                 if (time >= explosion.timeCreated + explosion.duration * 1000) {
                     this.explosions.splice(i, 1);
-                    this.app.stage.removeChild(explosion.graphic);
+                    for (let explosionCell of explosion.affectedCells) {
+                        this.app.stage.removeChild(explosionCell.graphic);
+                    }
                 }
             }
 
@@ -524,6 +517,7 @@ export default class Game {
             if (!player.inTransition && player.wantsToMove) {
 
                 const nextPos = this.getNextCell(player.position, player.movingDirection);
+                console.log(player.position);
                 if (!this.positionIsBlocked(nextPos)) {
                     
                     let canMove = true;

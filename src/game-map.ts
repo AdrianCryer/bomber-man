@@ -51,7 +51,7 @@ export default class GameMap {
                         break;
                     case 'x':
                         type = CellType.SPAWN;
-                        map.startingPositions.push({ x: i, y: j });
+                        map.startingPositions.push({ y: i, x: j });
                         break;
                 }
                 map.updateCell(i, j, type);

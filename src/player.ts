@@ -4,9 +4,9 @@ import { PlayerController } from "./player-controller";
 
 export enum Direction {
     UP = 0,
-    RIGHT = 1,
+    LEFT = 1,
     DOWN = 2,
-    LEFT = 3,
+    RIGHT = 3,
 };
 
 type PlayerConfiguration = {

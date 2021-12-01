@@ -1,3 +1,4 @@
+import * as PIXI from "pixi.js";
 import Game from "./game";
 import Player, { Direction } from "./player";
 
@@ -38,7 +39,31 @@ export class UserInputController implements PlayerController {
 
 }
 
-// class RandomAIInputController implements PlayerController {
+export class RandomAIInputController implements PlayerController {
 
-// }
+    private strollDelay: number = 200;
+    private lastMove: number = 0;
 
+    setup(view: Game, thisPlayer: Player) {
+        view.app.ticker.add(() => {
+            if (view.time >= this.lastMove + this.strollDelay) {
+                this.lastMove = view.time;  
+                let index = Math.floor(Math.random() * Object.values(keyMap).length);
+                let nextDirection = Object.values(keyMap)[index];
+                
+                thisPlayer.setMoving(nextDirection);
+            }
+        });
+    }
+
+    // Todo
+    private findNearestBrick() {}
+
+    // Go for powerup
+    
+
+    // Run away
+    private runAway() {}
+
+
+}

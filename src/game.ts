@@ -234,8 +234,6 @@ export default class Game {
             bomb.addedToCanvas = true;
             const sheet = this.resources['bomb'].spritesheet;
             bomb.graphic = new PIXI.AnimatedSprite(sheet.animations['exploding']);
-            bomb.graphic.width = this.relativeCellWidth.x;
-            bomb.graphic.height = this.relativeCellWidth.y;
             bomb.graphic.animationSpeed = 0.3; 
             bomb.graphic.play();
             bomb.graphic.zIndex = 1;
@@ -243,11 +241,13 @@ export default class Game {
             this.container.addChild(bomb.graphic);
         }
         
+        bomb.graphic.width = this.relativeCellWidth.x;
+        bomb.graphic.height = this.relativeCellWidth.y;
         bomb.graphic.position.x = bomb.position.x * this.relativeCellWidth.x;
         bomb.graphic.position.y = bomb.position.y * this.relativeCellWidth.y;
     }
 
-    private renderExplosionCell(explosionCell: ExplosionCell) {
+    renderExplosionCell(explosionCell: ExplosionCell) {
 
         if (!explosionCell.addedToCanvas) {
             explosionCell.addedToCanvas = true;
@@ -263,68 +263,25 @@ export default class Game {
             explosionCell.graphic = new PIXI.Sprite(texture);
             explosionCell.graphic.zIndex = 1;
                         
-            // explosionCell.graphic.pivot.set(
-            //     texture.width * this.relativeCellWidth.x / 2, 
-            //     texture.height * this.relativeCellWidth.y / 2
-            // );
-            // explosionCell.graphic.pivot.set(0.5, 0.5);
-            // if (explosionCell.direction === Direction.UP) {
-            //     explosionCell.graphic.angle = 270;
-            // }
-            // if (explosionCell.direction === Direction.DOWN) {
-            //     explosionCell.graphic.angle = 90;
-            // }
-
-            
-
-            // explosionCell.graphic.pivot.set(
-            //     this.relativeCellWidth.x / 2, 
-            //     this.relativeCellWidth.y / 2
-            // );
-
-            // if (explosionCell.direction === Direction.UP) {
-            //     explosionCell.graphic.angle = 270;
-            // }
-            // if (explosionCell.direction === Direction.DOWN) {
-            //     explosionCell.graphic.angle = 270;
-            // }
-
-            // explosionCell.graphic.position.set(
-            //     (explosionCell.position.x) * this.relativeCellWidth.x,
-            //     (explosionCell.position.y) * this.relativeCellWidth.y,
-            // );
-            
-            const x = (0.5 + explosionCell.position.x) * this.relativeCellWidth.x;
-            const y = (0.5 + explosionCell.position.y) * this.relativeCellWidth.y;
-            // const angle = explosionCell.direction === Direction.DOWN ? 270 : 0;
             const angle = (explosionCell.direction + 1) * 90 % 360;
-            console.log(angle)
-            
-            explosionCell.graphic.pivot.set(texture.width / 2, texture.height / 2);
             explosionCell.graphic.angle = angle;
-            explosionCell.graphic.position.set(x, y);
-
-            const scaleX = this.relativeCellWidth.x / texture.width;
-            const scaleY = this.relativeCellWidth.y / texture.height;
-            if (explosionCell.graphic.angle == 90 || explosionCell.graphic.angle == 270) {
-                explosionCell.graphic.scale.set(scaleY, scaleX);
-            } else {
-                explosionCell.graphic.scale.set(scaleX, scaleY);
-            }
-
-
-            // explosionCell.graphic.width = this.relativeCellWidth.x;
-            // explosionCell.graphic.height = this.relativeCellWidth.y;
-            // explosionCell.graphic.scale.set(this.relativeCellWidth.x, this.relativeCellWidth.y);
-
-            // explosionCell.graphic.anchor.set(
-            //     (0.5 + explosionCell.position.x) * this.relativeCellWidth.x * -this.cellWidth,
-            //     (0.5 + explosionCell.position.y) * this.relativeCellWidth.y,
-            // );
-            
-            
 
             this.container.addChild(explosionCell.graphic);
+        }
+        
+        const x = (0.5 + explosionCell.position.x) * this.relativeCellWidth.x;
+        const y = (0.5 + explosionCell.position.y) * this.relativeCellWidth.y;
+        explosionCell.graphic.position.set(x, y);
+        
+        const texture = explosionCell.graphic.texture;
+        explosionCell.graphic.pivot.set(texture.width / 2, texture.height / 2);
+
+        const scaleX = this.relativeCellWidth.x / texture.width;
+        const scaleY = this.relativeCellWidth.y / texture.height;
+        if (explosionCell.graphic.angle == 90 || explosionCell.graphic.angle == 270) {
+            explosionCell.graphic.scale.set(scaleY, scaleX);
+        } else {
+            explosionCell.graphic.scale.set(scaleX, scaleY);
         }
     }
 

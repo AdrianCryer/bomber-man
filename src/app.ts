@@ -1,46 +1,102 @@
-import * as PIXI from "pixi.js";
-import Game from "./game"; 
+import * as PIXI from "pixi.js"
+import { SCALE_MODES } from "pixi.js";
+import Game from "./game";
 import GameMap from "./game-map";
+import Scoreboard from "./scoreboard";
+import { GameSettings } from "./types";
 
 import basicMap from "../maps/basic.txt";
 import retroMap from "../maps/retro.txt";
-import testMap from "../maps/test.txt";
-import { SCALE_MODES } from "pixi.js";
-import { GameSettings } from "./types";
 
-const app = new PIXI.Application({
-    width: 1600,
-    height: 900,
-    antialias: false
-});
-app.renderer.backgroundColor = 0xaaaaaa;
-document.getElementById("game").appendChild(app.view);
 
-// PIXI.settings.ROUND_PIXELS = true;
-// PIXI.settings.SCALE_MODE = SCALE_MODES.NEAREST;
-PIXI.settings.SCALE_MODE = SCALE_MODES.NEAREST;
+const assets = {    
+    "solid": "../assets/solid-sprite.png",
+    "open": "../assets/open-sprite.png",
+    "brick": "../assets/brick-sprite.png",
+    "bomb": "../assets/bomb-spritesheet.json",
+    "explosion": "../assets/explosion-spritesheet.json",
+    '04B_30__': '../assets/fonts/04B_30__.TTF'
+};
 
-app.loader.add("solid", "../assets/solid-sprite.png");
-app.loader.add("open", "../assets/open-sprite.png");
-app.loader.add("brick", "../assets/brick-sprite.png");
-app.loader.add("bomb", "../assets/bomb-spritesheet.json");
-app.loader.add("explosion", "../assets/explosion-spritesheet.json");
-app.loader.add('04B_30__', '../assets/fonts/04B_30__.TTF');
-app.loader.load(run);
+export default class App {
 
-async function run() {
+    root: HTMLElement;
+    app: PIXI.Application;
+    
+    game: Game;
+    gameContainer: PIXI.Container;
+    gameRoot: PIXI.Graphics;
+    
+    scoreboard: Scoreboard;
 
-    const mapString = await GameMap.loadMapFile(retroMap);
-    const settings: GameSettings = {
-        map: GameMap.loadFromFile(mapString),
-        bots: 1,
-        difficulty: 'easy',
-        initialSpeed: 5,
-        speedCap: 10,
-        tickrate: 64,
-        brickSpawnPercentage: 0.3
-    };
+    private scoreboardRatio: number = 0.3;
 
-    const game = new Game(app, settings);
-    game.start()
+    constructor(window: any, root: HTMLElement) {
+        this.app = new PIXI.Application({
+            width: 1920,
+            height: 1080,
+            antialias: false,
+            resizeTo: window
+        });
+        this.app.stage.sortableChildren = true;
+
+        root.appendChild(this.app.view);
+
+        // Handle window resizing
+        window.addEventListener('resize', () => this.resize());
+
+        // PIXI Global settings
+        PIXI.settings.SCALE_MODE = SCALE_MODES.NEAREST;
+
+        // Load assets
+        for (let [name, path] of Object.entries(assets)) {
+            this.app.loader.add(name, path);
+        }
+
+        this.gameContainer = new PIXI.Container();
+        this.app.renderer.backgroundColor = 0xEA4C46
+        
+        this.gameRoot = new PIXI.Graphics();
+        this.gameRoot
+        .beginFill(0xEA4C46)
+        .drawRect(0, 0, this.app.screen.width, this.app.screen.height)
+        .endFill();
+        
+        this.gameContainer.addChild(this.gameRoot);
+        this.app.stage.addChild(this.gameContainer);
+    }
+
+    resize() {
+        console.log("RESIZING")
+
+        // TODO
+        // const { innerWidth, innerHeight } = window
+        // let ratio = Math.min(innerWidth / this.app.renderer.width, innerHeight / this.app.renderer.height);
+        // const { x: scaleX, y: scaleY } = this.gameContainer.scale;
+
+        this.app.renderer.resize(window.innerWidth, window.innerHeight);
+    }
+
+    async setup() {
+        const mapString = await GameMap.loadMapFile(retroMap);
+        const settings: GameSettings = {
+            map: GameMap.loadFromFile(mapString),
+            bots: 1,
+            difficulty: 'easy',
+            initialSpeed: 3,
+            speedCap: 10,
+            tickrate: 64,
+            brickSpawnPercentage: 0.3
+        };
+
+        const resources = this.app.loader.resources;
+        const ticker = this.app.ticker;
+
+        const game = new Game(this.gameContainer, ticker, resources, settings);
+        game.start()
+    }
+
+    async run() {
+        this.app.loader.load(() => this.setup());
+    }
 }

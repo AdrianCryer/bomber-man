@@ -3,7 +3,7 @@ import { Graphics, Sprite } from "pixi.js";
 import GameMap, { CellType } from "./game-map";
 import Player, { Bomb, Direction } from "./player";
 import { RandomAIInputController, UserInputController } from "./player-controller";
-import { GameSettings, Position } from "./types";
+import { GameSettings, Position, Resources } from "./types";
 
 type Explosion = {
     graphic: Graphics;
@@ -37,7 +37,10 @@ type GameCell = {
 export default class Game {
 
     settings: GameSettings;
-    app: PIXI.Application;
+    container: PIXI.Container;
+    resources: Resources;
+    ticker: PIXI.Ticker;
+
     explosions: Explosion[];
     players: Player[];
     cells: GameCell[][];
@@ -46,15 +49,17 @@ export default class Game {
     cellsContainer: PIXI.Container;
     itemsContainer: PIXI.Container;
 
-    constructor(app: PIXI.Application, settings: GameSettings) {
-        
+    constructor(container: PIXI.Container, ticker: PIXI.Ticker, resources: Resources, settings: GameSettings) {
+
+        this.container = container;
+        this.ticker = ticker;
+        this.resources = resources;
         this.settings = settings;
-        this.app = app;
-        app.stage.sortableChildren = true;
+
+        this.container.sortableChildren = true;
 
         // Set initial positions
         const startingPositions = settings.map.startingPositions;
-        console.log(startingPositions)
 
         // Setup grid
         const { height, width} = this.settings.map.props;
@@ -76,7 +81,7 @@ export default class Game {
             new Graphics(),
             new UserInputController(),
             {
-                position: settings.map.startingPositions[0],
+                position: startingPositions[0],
                 speed: settings.initialSpeed,
                 bombCount: 1,
                 bombExplosionRadius: 5,
@@ -93,7 +98,7 @@ export default class Game {
                     new Graphics(),
                     new RandomAIInputController(),
                     {
-                        position: settings.map.startingPositions[i + 1],
+                        position: startingPositions[i + 1],
                         speed: settings.initialSpeed,
                         bombCount: 1,
                         bombExplosionRadius: 5,
@@ -104,7 +109,6 @@ export default class Game {
             )
         } 
 
-        console.log(this.players);
         for (let player of this.players) {
             player.controller.setup(this, player);
         }
@@ -121,7 +125,7 @@ export default class Game {
     }
 
     createCell(cellType: CellType, spriteName: string): GameCell {
-        const texture = this.app.loader.resources[spriteName].texture;
+        const texture = this.resources[spriteName].texture;
 
         let cell = {
             graphic: new Sprite(texture),
@@ -154,8 +158,8 @@ export default class Game {
     private renderCell(x: number, y: number, cell: GameCell, intialPass=true) {
 
         const cellWidth = Math.min(
-            this.app.screen.width / this.settings.map.props.width,
-            this.app.screen.height / this.settings.map.props.height,
+            this.container.width / this.settings.map.props.width,
+            this.container.height / this.settings.map.props.height,
         );
 
         let colour = 0x999999;
@@ -179,11 +183,12 @@ export default class Game {
         if (intialPass) {
 
             cell.graphic.zIndex = 0;
-            this.app.stage.addChild(cell.graphic);
+            this.container.addChild(cell.graphic);
         }
     }
 
     private renderGrid() {
+        console.log("Rendering Grid", this.settings.map)
         const { height: mapHeight, width: mapWidth } = this.settings.map.props;
         for (let i = 0; i < mapHeight; i++) {
             for (let j = 0; j < mapWidth; j++) {
@@ -195,8 +200,8 @@ export default class Game {
     renderPlayers(initialPass: boolean = false) {
         const { height: mapHeight, width: mapWidth } = this.settings.map.props;
         const cellWidth = Math.min(
-            this.app.screen.width / mapWidth,
-            this.app.screen.height / mapHeight,
+            this.container.width / mapWidth,
+            this.container.height / mapHeight,
         );
         
         for (let player of this.players) {
@@ -212,7 +217,7 @@ export default class Game {
                 .endFill();
             if (initialPass) {
                 player.graphic.zIndex = 1;
-                this.app.stage.addChild(player.graphic);
+                this.container.addChild(player.graphic);
             }
         }
     }
@@ -220,13 +225,13 @@ export default class Game {
     renderBomb(bomb: Bomb) {
         const { height: mapHeight, width: mapWidth } = this.settings.map.props;
         const cellWidth = Math.min(
-            this.app.screen.width / mapWidth,
-            this.app.screen.height / mapHeight,
+            this.container.width / mapWidth,
+            this.container.height / mapHeight,
         );
 
         if (!bomb.addedToCanvas) {
             bomb.addedToCanvas = true;
-            const sheet = this.app.loader.resources['bomb'].spritesheet;
+            const sheet = this.resources['bomb'].spritesheet;
             bomb.graphic = new PIXI.AnimatedSprite(sheet.animations['exploding']);
             bomb.graphic.width = cellWidth;
             bomb.graphic.height = cellWidth;
@@ -234,7 +239,7 @@ export default class Game {
             bomb.graphic.play();
             bomb.graphic.zIndex = 1;
 
-            this.app.stage.addChild(bomb.graphic);
+            this.container.addChild(bomb.graphic);
         }
         
         bomb.graphic.position.x = bomb.position.x * cellWidth;
@@ -244,8 +249,8 @@ export default class Game {
     private renderExplosionAtCell(explosion: Explosion, x: number, y: number) {
         const { height: mapHeight, width: mapWidth } = this.settings.map.props;
         const cellWidth = Math.min(
-            this.app.screen.width / mapWidth,
-            this.app.screen.height / mapHeight,
+            this.container.width / mapWidth,
+            this.container.height / mapHeight,
         );
         
 
@@ -259,21 +264,20 @@ export default class Game {
             );
         if (!explosion.addedToCanvas) {
             explosion.addedToCanvas = true;
-            this.app.stage.addChild(explosion.graphic);
+            this.container.addChild(explosion.graphic);
         }
     }
 
     private renderExplosionCell(explosionCell: ExplosionCell) {
         const { height: mapHeight, width: mapWidth } = this.settings.map.props;
         const cellWidth = Math.min(
-            this.app.screen.width / mapWidth,
-            this.app.screen.height / mapHeight,
+            this.container.width / mapWidth,
+            this.container.height / mapHeight,
         );
 
         if (!explosionCell.addedToCanvas) {
             explosionCell.addedToCanvas = true;
-            const sheet = this.app.loader.resources['explosion'].spritesheet;
-            console.log(sheet)
+            const sheet = this.resources['explosion'].spritesheet;
             let code = 'base';
             if (explosionCell.isCentre) {
                 code = 'centre';
@@ -304,7 +308,7 @@ export default class Game {
             )
 
 
-            this.app.stage.addChild(explosionCell.graphic);
+            this.container.addChild(explosionCell.graphic);
         }
     }
 
@@ -362,7 +366,6 @@ export default class Game {
             i++;
         }
 
-        console.log(affectedCells);
         return affectedCells;
     }
 
@@ -372,7 +375,7 @@ export default class Game {
             let cell = this.cells[pos.y][pos.x];
             if (cell.type === CellType.BRICK) {
                 
-                this.app.stage.removeChild(cell.graphic);
+                this.container.removeChild(cell.graphic);
                 this.cells[pos.y][pos.x] = this.createCell(CellType.OPEN, 'open');
 
                 // Rerender
@@ -384,7 +387,7 @@ export default class Game {
     start() {
         // Render grid,
         this.renderGrid();
-        this.app.ticker.add(() => {
+        this.ticker.add(() => {
             let timeNow = (new Date()).getTime();
             let timeDiff = timeNow - this.time;
 
@@ -395,7 +398,7 @@ export default class Game {
             this.fixedUpdate(timeNow);
         });
         this.renderPlayers(true);
-        this.app.ticker.add(() => this.loop())
+        this.ticker.add(() => this.loop())
     }
 
     positionIsInBounds(position: Position): boolean {
@@ -499,7 +502,7 @@ export default class Game {
 
                     // Remove bomb
                     player.bombs.splice(i, 1);
-                    this.app.stage.removeChild(bomb.graphic);
+                    this.container.removeChild(bomb.graphic);
                 }
             }
 
@@ -508,7 +511,7 @@ export default class Game {
                 if (time >= explosion.timeCreated + explosion.duration * 1000) {
                     this.explosions.splice(i, 1);
                     for (let explosionCell of explosion.affectedCells) {
-                        this.app.stage.removeChild(explosionCell.graphic);
+                        this.container.removeChild(explosionCell.graphic);
                     }
                 }
             }
@@ -517,7 +520,6 @@ export default class Game {
             if (!player.inTransition && player.wantsToMove) {
 
                 const nextPos = this.getNextCell(player.position, player.movingDirection);
-                console.log(player.position);
                 if (!this.positionIsBlocked(nextPos)) {
                     
                     let canMove = true;

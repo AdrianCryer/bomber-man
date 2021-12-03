@@ -1,5 +1,8 @@
+import * as PIXI from "pixi.js";
 import { Graphics } from "pixi.js";
 import GameMap from "./game-map";
+
+export type Resources = PIXI.utils.Dict<PIXI.LoaderResource>;
 
 export type Position = { x: number; y: number };
 

@@ -45,7 +45,7 @@ export class RandomAIInputController implements PlayerController {
     private lastMove: number = 0;
 
     setup(view: Game, thisPlayer: Player) {
-        view.app.ticker.add(() => {
+        view.ticker.add(() => {
             if (view.time >= this.lastMove + this.strollDelay) {
                 this.lastMove = view.time;  
                 let index = Math.floor(Math.random() * Object.values(keyMap).length);

@@ -3,11 +3,10 @@ import { Graphics, Sprite } from "pixi.js";
 import GameMap, { CellType } from "./game-map";
 import Player, { Bomb, Direction } from "./player";
 import { RandomAIInputController, UserInputController } from "./player-controller";
+import StatusBoard from "./statusboard";
 import { GameSettings, Position, Resources } from "./types";
 
 type Explosion = {
-    graphic: Graphics;
-    addedToCanvas: boolean;
     center: Position;
     radius: number;
     duration: number;
@@ -46,6 +45,13 @@ export default class Game {
     cells: GameCell[][];
     time: number;
 
+    /** Contains the game's grid and playable contents */
+    gridContainer: PIXI.Container;
+
+    /** Status board */
+    statusBoardContainer: PIXI.Container;
+    statusBoard: StatusBoard;
+
     cellsContainer: PIXI.Container;
     itemsContainer: PIXI.Container;
     relativeCellWidth: { x: number; y: number; };
@@ -60,8 +66,36 @@ export default class Game {
 
         this.container.sortableChildren = true;
 
+        this.gridContainer = new PIXI.Container();
+        this.gridContainer.sortableChildren = true;
+        
+        this.container.addChild(this.gridContainer);
+
+        if (this.settings.statusBoard) {
+            this.statusBoardContainer = new PIXI.Container();
+            this.container.addChild(this.statusBoardContainer);
+
+            // Setup scale
+            const { alignment, splitRatio } = this.settings.statusBoard;
+            if (alignment === 'right') {
+                this.statusBoardContainer.position.set(1 - splitRatio, 0);
+            } else {
+                this.gridContainer.position.set(splitRatio, 0);
+            }
+            this.statusBoardContainer.scale.set(splitRatio, 1);
+            this.gridContainer.scale.set(1 - splitRatio, 1);
+
+            this.statusBoard = new StatusBoard(this.statusBoardContainer, resources);
+        }
+
+        this.calculateGridCellSize();
+        this.setupGame();
+    }
+
+    setupGame() {
+
         // Set initial positions
-        const startingPositions = settings.map.startingPositions;
+        const startingPositions = this.settings.map.startingPositions;
 
         // Setup grid
         const { height, width } = this.settings.map.props;
@@ -70,9 +104,8 @@ export default class Game {
             this.cells[i] = new Array(width);
         }
 
-        this.calculatePixelSize();
         this.loadMap();
-        // this.spawnBricks();
+        this.spawnBricks();
 
         // Setup players
         this.players = [];
@@ -85,7 +118,7 @@ export default class Game {
             new UserInputController(),
             {
                 position: startingPositions[0],
-                speed: settings.initialSpeed,
+                speed: this.settings.initialSpeed,
                 bombCount: 1,
                 bombExplosionRadius: 5,
                 bombExplosionDuration: 5,
@@ -94,7 +127,7 @@ export default class Game {
         ));
 
         // Add bots
-        for (let i = 0; i < settings.bots; i++) {
+        for (let i = 0; i < this.settings.bots; i++) {
             this.players.push(
                 new Player(
                     i + 1,
@@ -102,7 +135,7 @@ export default class Game {
                     new RandomAIInputController(),
                     {
                         position: startingPositions[i + 1],
-                        speed: settings.initialSpeed,
+                        speed: this.settings.initialSpeed,
                         bombCount: 1,
                         bombExplosionRadius: 5,
                         bombExplosionDuration: 1,
@@ -158,19 +191,21 @@ export default class Game {
         }
     }
 
-    calculatePixelSize() { 
+    calculateGridCellSize() { 
+        const gridWidthScalar = this.settings.statusBoard ? (1 - this.settings.statusBoard.splitRatio) : 1;
+
         this.cellWidth = Math.min(
-            this.container.scale.x / this.settings.map.props.width,
+            this.container.scale.x / this.settings.map.props.width  * gridWidthScalar,
             this.container.scale.y / this.settings.map.props.height
         );
         this.relativeCellWidth = {
-            x: this.cellWidth / this.container.scale.x,
+            x: this.cellWidth / this.container.scale.x / gridWidthScalar,
             y: this.cellWidth / this.container.scale.y,
         };
     }
 
     resize() {
-        this.calculatePixelSize();
+        this.calculateGridCellSize();
         this.renderGrid(false);
     }
 
@@ -196,7 +231,7 @@ export default class Game {
 
         if (intialPass) {
             cell.graphic.zIndex = 0;
-            this.container.addChild(cell.graphic);
+            this.gridContainer.addChild(cell.graphic);
         }
     }
 
@@ -223,7 +258,7 @@ export default class Game {
                 .endFill();
             if (initialPass) {
                 player.graphic.zIndex = 1;
-                this.container.addChild(player.graphic);
+                this.gridContainer.addChild(player.graphic);
             }
         }
     }
@@ -238,7 +273,7 @@ export default class Game {
             bomb.graphic.play();
             bomb.graphic.zIndex = 1;
 
-            this.container.addChild(bomb.graphic);
+            this.gridContainer.addChild(bomb.graphic);
         }
         
         bomb.graphic.width = this.relativeCellWidth.x;
@@ -266,7 +301,7 @@ export default class Game {
             const angle = (explosionCell.direction + 1) * 90 % 360;
             explosionCell.graphic.angle = angle;
 
-            this.container.addChild(explosionCell.graphic);
+            this.gridContainer.addChild(explosionCell.graphic);
         }
         
         const x = (0.5 + explosionCell.position.x) * this.relativeCellWidth.x;
@@ -348,7 +383,7 @@ export default class Game {
             let cell = this.cells[pos.y][pos.x];
             if (cell.type === CellType.BRICK) {
                 
-                this.container.removeChild(cell.graphic);
+                this.gridContainer.removeChild(cell.graphic);
                 this.cells[pos.y][pos.x] = this.createCell(CellType.OPEN, 'open');
 
                 // Rerender
@@ -358,7 +393,9 @@ export default class Game {
     }
 
     start() {
-        // Render grid,
+        if (this.statusBoard) {
+            this.statusBoard.render();
+        }
         this.renderGrid(true);
         this.ticker.add(() => {
             let timeNow = (new Date()).getTime();
@@ -475,7 +512,7 @@ export default class Game {
 
                     // Remove bomb
                     player.bombs.splice(i, 1);
-                    this.container.removeChild(bomb.graphic);
+                    this.gridContainer.removeChild(bomb.graphic);
                 }
             }
 
@@ -484,7 +521,7 @@ export default class Game {
                 if (time >= explosion.timeCreated + explosion.duration * 1000) {
                     this.explosions.splice(i, 1);
                     for (let explosionCell of explosion.affectedCells) {
-                        this.container.removeChild(explosionCell.graphic);
+                        this.gridContainer.removeChild(explosionCell.graphic);
                     }
                 }
             }

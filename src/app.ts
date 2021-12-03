@@ -2,7 +2,7 @@ import * as PIXI from "pixi.js"
 import { SCALE_MODES } from "pixi.js";
 import Game from "./game";
 import GameMap from "./game-map";
-import Scoreboard from "./scoreboard";
+import StatusBoard from "./statusboard";
 import { GameSettings } from "./types";
 
 import basicMap from "../maps/basic.txt";
@@ -27,9 +27,9 @@ export default class App {
     gameContainer: PIXI.Container;
     gameRoot: PIXI.Graphics;
     
-    scoreboard: Scoreboard;
+    StatusBoard: StatusBoard;
 
-    private scoreboardRatio: number = 0.3;
+    private StatusBoardRatio: number = 0.3;
 
     constructor(window: any, root: HTMLElement) {
         this.app = new PIXI.Application({
@@ -63,7 +63,7 @@ export default class App {
     resize() {
         this.app.renderer.resize(window.innerWidth, window.innerHeight);
         this.gameContainer.scale.set(this.app.screen.width, this.app.screen.height);
-        
+
         if (this.game) {
             this.game.resize();
         }
@@ -78,7 +78,11 @@ export default class App {
             initialSpeed: 3,
             speedCap: 10,
             tickrate: 64,
-            brickSpawnPercentage: 0.3
+            brickSpawnPercentage: 0.3,
+            statusBoard: {
+                alignment: 'left',
+                splitRatio: 0.2
+            }
         };
 
         const resources = this.app.loader.resources;

@@ -49,4 +49,9 @@ export type GameSettings = {
     brickSpawnPercentage: number;
 
     // powerups: { [type: PowerUpType]: PowerUpConfig}
+
+    statusBoard?: {
+        alignment: 'left' | 'right';
+        splitRatio: number;
+    };
 };

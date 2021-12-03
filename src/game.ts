@@ -48,6 +48,8 @@ export default class Game {
 
     cellsContainer: PIXI.Container;
     itemsContainer: PIXI.Container;
+    relativeCellWidth: { x: number; y: number; };
+    cellWidth: number;
 
     constructor(container: PIXI.Container, ticker: PIXI.Ticker, resources: Resources, settings: GameSettings) {
 
@@ -62,14 +64,15 @@ export default class Game {
         const startingPositions = settings.map.startingPositions;
 
         // Setup grid
-        const { height, width} = this.settings.map.props;
+        const { height, width } = this.settings.map.props;
         this.cells = [];
         for (let i = 0; i < height; i++) {
             this.cells[i] = new Array(width);
         }
 
+        this.calculatePixelSize();
         this.loadMap();
-        this.spawnBricks();
+        // this.spawnBricks();
 
         // Setup players
         this.players = [];
@@ -85,7 +88,7 @@ export default class Game {
                 speed: settings.initialSpeed,
                 bombCount: 1,
                 bombExplosionRadius: 5,
-                bombExplosionDuration: 1,
+                bombExplosionDuration: 5,
                 bombTimer: 3
             }
         ));
@@ -114,7 +117,7 @@ export default class Game {
         }
     }
 
-    private loadMap() {
+    loadMap() {
         const { height, width} = this.settings.map.props;
         for (let i = 0; i < height; i++) {
             for (let j = 0; j < width; j++) {
@@ -142,7 +145,7 @@ export default class Game {
         return cell;
     }
 
-    private spawnBricks() {
+    spawnBricks() {
         const { height, width } = this.settings.map.props;
         for (let i = 0; i < height; i++) {
             for (let j = 0; j < width; j++) {
@@ -155,12 +158,23 @@ export default class Game {
         }
     }
 
-    private renderCell(x: number, y: number, cell: GameCell, intialPass=true) {
-
-        const cellWidth = Math.min(
-            this.container.width / this.settings.map.props.width,
-            this.container.height / this.settings.map.props.height,
+    calculatePixelSize() { 
+        this.cellWidth = Math.min(
+            this.container.scale.x / this.settings.map.props.width,
+            this.container.scale.y / this.settings.map.props.height
         );
+        this.relativeCellWidth = {
+            x: this.cellWidth / this.container.scale.x,
+            y: this.cellWidth / this.container.scale.y,
+        };
+    }
+
+    resize() {
+        this.calculatePixelSize();
+        this.renderGrid(false);
+    }
+
+    renderCell(x: number, y: number, cell: GameCell, intialPass=false) {
 
         let colour = 0x999999;
         switch (cell.type) {
@@ -175,44 +189,36 @@ export default class Game {
 
         cell.graphic.texture.baseTexture.scaleMode = PIXI.SCALE_MODES.NEAREST;
 
-        cell.graphic.position.x = x * cellWidth;
-        cell.graphic.position.y = y * cellWidth;
-        cell.graphic.width = cellWidth;
-        cell.graphic.height = cellWidth;
+        cell.graphic.position.x = x * this.relativeCellWidth.x;
+        cell.graphic.position.y = y * this.relativeCellWidth.y;
+        cell.graphic.width = this.relativeCellWidth.x;
+        cell.graphic.height = this.relativeCellWidth.y;
 
         if (intialPass) {
-
             cell.graphic.zIndex = 0;
             this.container.addChild(cell.graphic);
         }
     }
 
-    private renderGrid() {
-        console.log("Rendering Grid", this.settings.map)
-        const { height: mapHeight, width: mapWidth } = this.settings.map.props;
-        for (let i = 0; i < mapHeight; i++) {
-            for (let j = 0; j < mapWidth; j++) {
-                this.renderCell(j, i, this.cells[i][j]);
+    renderGrid(initialPass: boolean = false) {
+        const { height, width } = this.settings.map.props;
+        for (let i = 0; i < height; i++) {
+            for (let j = 0; j < width; j++) {
+                this.renderCell(j, i, this.cells[i][j], initialPass);
             }
         }
     }
 
     renderPlayers(initialPass: boolean = false) {
-        const { height: mapHeight, width: mapWidth } = this.settings.map.props;
-        const cellWidth = Math.min(
-            this.container.width / mapWidth,
-            this.container.height / mapHeight,
-        );
-        
         for (let player of this.players) {
             player.graphic.clear();
             player.graphic
                 .beginFill(0xEA4C46)
                 .drawRect(
-                    (0.25 + player.position.x) * cellWidth, 
-                    (0.25 + player.position.y) * cellWidth, 
-                    cellWidth / 2,
-                    cellWidth / 2
+                    (0.25 + player.position.x) * this.relativeCellWidth.x, 
+                    (0.25 + player.position.y) * this.relativeCellWidth.y, 
+                    this.relativeCellWidth.x / 2,
+                    this.relativeCellWidth.y / 2
                 )
                 .endFill();
             if (initialPass) {
@@ -223,18 +229,13 @@ export default class Game {
     }
 
     renderBomb(bomb: Bomb) {
-        const { height: mapHeight, width: mapWidth } = this.settings.map.props;
-        const cellWidth = Math.min(
-            this.container.width / mapWidth,
-            this.container.height / mapHeight,
-        );
 
         if (!bomb.addedToCanvas) {
             bomb.addedToCanvas = true;
             const sheet = this.resources['bomb'].spritesheet;
             bomb.graphic = new PIXI.AnimatedSprite(sheet.animations['exploding']);
-            bomb.graphic.width = cellWidth;
-            bomb.graphic.height = cellWidth;
+            bomb.graphic.width = this.relativeCellWidth.x;
+            bomb.graphic.height = this.relativeCellWidth.y;
             bomb.graphic.animationSpeed = 0.3; 
             bomb.graphic.play();
             bomb.graphic.zIndex = 1;
@@ -242,38 +243,11 @@ export default class Game {
             this.container.addChild(bomb.graphic);
         }
         
-        bomb.graphic.position.x = bomb.position.x * cellWidth;
-        bomb.graphic.position.y = bomb.position.y * cellWidth;
-    }
-
-    private renderExplosionAtCell(explosion: Explosion, x: number, y: number) {
-        const { height: mapHeight, width: mapWidth } = this.settings.map.props;
-        const cellWidth = Math.min(
-            this.container.width / mapWidth,
-            this.container.height / mapHeight,
-        );
-        
-
-        explosion.graphic
-            .beginFill(0xB53737)
-            .drawRect(
-                x * cellWidth, 
-                y * cellWidth, 
-                cellWidth, 
-                cellWidth
-            );
-        if (!explosion.addedToCanvas) {
-            explosion.addedToCanvas = true;
-            this.container.addChild(explosion.graphic);
-        }
+        bomb.graphic.position.x = bomb.position.x * this.relativeCellWidth.x;
+        bomb.graphic.position.y = bomb.position.y * this.relativeCellWidth.y;
     }
 
     private renderExplosionCell(explosionCell: ExplosionCell) {
-        const { height: mapHeight, width: mapWidth } = this.settings.map.props;
-        const cellWidth = Math.min(
-            this.container.width / mapWidth,
-            this.container.height / mapHeight,
-        );
 
         if (!explosionCell.addedToCanvas) {
             explosionCell.addedToCanvas = true;
@@ -287,26 +261,68 @@ export default class Game {
 
             const texture = sheet.textures[`explosion-${code}-${explosionCell.intensity}`];
             explosionCell.graphic = new PIXI.Sprite(texture);
-            explosionCell.graphic.width = cellWidth;
-            explosionCell.graphic.height = cellWidth;
             explosionCell.graphic.zIndex = 1;
                         
-            explosionCell.graphic.pivot.set(
-                texture.width / 2, 
-                texture.height / 2
-            );
-            if (explosionCell.direction === Direction.UP) {
-                explosionCell.graphic.angle = 270;
-            }
-            if (explosionCell.direction === Direction.DOWN) {
-                explosionCell.graphic.angle = 90;
+            // explosionCell.graphic.pivot.set(
+            //     texture.width * this.relativeCellWidth.x / 2, 
+            //     texture.height * this.relativeCellWidth.y / 2
+            // );
+            // explosionCell.graphic.pivot.set(0.5, 0.5);
+            // if (explosionCell.direction === Direction.UP) {
+            //     explosionCell.graphic.angle = 270;
+            // }
+            // if (explosionCell.direction === Direction.DOWN) {
+            //     explosionCell.graphic.angle = 90;
+            // }
+
+            
+
+            // explosionCell.graphic.pivot.set(
+            //     this.relativeCellWidth.x / 2, 
+            //     this.relativeCellWidth.y / 2
+            // );
+
+            // if (explosionCell.direction === Direction.UP) {
+            //     explosionCell.graphic.angle = 270;
+            // }
+            // if (explosionCell.direction === Direction.DOWN) {
+            //     explosionCell.graphic.angle = 270;
+            // }
+
+            // explosionCell.graphic.position.set(
+            //     (explosionCell.position.x) * this.relativeCellWidth.x,
+            //     (explosionCell.position.y) * this.relativeCellWidth.y,
+            // );
+            
+            const x = (0.5 + explosionCell.position.x) * this.relativeCellWidth.x;
+            const y = (0.5 + explosionCell.position.y) * this.relativeCellWidth.y;
+            // const angle = explosionCell.direction === Direction.DOWN ? 270 : 0;
+            const angle = (explosionCell.direction + 1) * 90 % 360;
+            console.log(angle)
+            
+            explosionCell.graphic.pivot.set(texture.width / 2, texture.height / 2);
+            explosionCell.graphic.angle = angle;
+            explosionCell.graphic.position.set(x, y);
+
+            const scaleX = this.relativeCellWidth.x / texture.width;
+            const scaleY = this.relativeCellWidth.y / texture.height;
+            if (explosionCell.graphic.angle == 90 || explosionCell.graphic.angle == 270) {
+                explosionCell.graphic.scale.set(scaleY, scaleX);
+            } else {
+                explosionCell.graphic.scale.set(scaleX, scaleY);
             }
 
-            explosionCell.graphic.position.set(
-                (0.5 + explosionCell.position.x) * cellWidth,
-                (0.5 + explosionCell.position.y) * cellWidth,
-            )
 
+            // explosionCell.graphic.width = this.relativeCellWidth.x;
+            // explosionCell.graphic.height = this.relativeCellWidth.y;
+            // explosionCell.graphic.scale.set(this.relativeCellWidth.x, this.relativeCellWidth.y);
+
+            // explosionCell.graphic.anchor.set(
+            //     (0.5 + explosionCell.position.x) * this.relativeCellWidth.x * -this.cellWidth,
+            //     (0.5 + explosionCell.position.y) * this.relativeCellWidth.y,
+            // );
+            
+            
 
             this.container.addChild(explosionCell.graphic);
         }
@@ -386,7 +402,7 @@ export default class Game {
 
     start() {
         // Render grid,
-        this.renderGrid();
+        this.renderGrid(true);
         this.ticker.add(() => {
             let timeNow = (new Date()).getTime();
             let timeDiff = timeNow - this.time;
@@ -398,7 +414,7 @@ export default class Game {
             this.fixedUpdate(timeNow);
         });
         this.renderPlayers(true);
-        this.ticker.add(() => this.loop())
+        this.ticker.add(() => this.loop());
     }
 
     positionIsInBounds(position: Position): boolean {

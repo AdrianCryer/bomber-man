@@ -47,6 +47,7 @@ export default class App {
 
         // PIXI Global settings
         PIXI.settings.SCALE_MODE = SCALE_MODES.NEAREST;
+        PIXI.settings.ROUND_PIXELS = true;
 
         // Load assets
         for (let [name, path] of Object.entries(assets)) {
@@ -54,27 +55,18 @@ export default class App {
         }
 
         this.gameContainer = new PIXI.Container();
-        this.app.renderer.backgroundColor = 0xEA4C46
-        
-        this.gameRoot = new PIXI.Graphics();
-        this.gameRoot
-        .beginFill(0xEA4C46)
-        .drawRect(0, 0, this.app.screen.width, this.app.screen.height)
-        .endFill();
-        
-        this.gameContainer.addChild(this.gameRoot);
+        this.gameContainer.scale.set(this.app.screen.width, this.app.screen.height);
+        this.app.renderer.backgroundColor = 0x564dff;
         this.app.stage.addChild(this.gameContainer);
     }
 
     resize() {
-        console.log("RESIZING")
-
-        // TODO
-        // const { innerWidth, innerHeight } = window
-        // let ratio = Math.min(innerWidth / this.app.renderer.width, innerHeight / this.app.renderer.height);
-        // const { x: scaleX, y: scaleY } = this.gameContainer.scale;
-
         this.app.renderer.resize(window.innerWidth, window.innerHeight);
+        this.gameContainer.scale.set(this.app.screen.width, this.app.screen.height);
+        
+        if (this.game) {
+            this.game.resize();
+        }
     }
 
     async setup() {
@@ -92,8 +84,8 @@ export default class App {
         const resources = this.app.loader.resources;
         const ticker = this.app.ticker;
 
-        const game = new Game(this.gameContainer, ticker, resources, settings);
-        game.start()
+        this.game = new Game(this.gameContainer, ticker, resources, settings);
+        this.game.start()
     }
 
     async run() {

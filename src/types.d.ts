@@ -8,22 +8,29 @@ export type Position = { x: number; y: number };
 
 export type Size = { width: number; height: number };
 
-export enum PowerUpType {
-    SPEED = 'speed',
-    EXPLOSION_RADIUS = 'radius',
-    EXPLOSION_SPEED = 'explosion_speed',
-    BOMB_COUNT = 'bomb_count'
-}
+export type StatsConfig = {
+    // Blocks per second
+    speed: number;
 
-export interface PowerUp {
-    graphic: Graphics;
-    type: PowerUpType;
-    tier: number;
-}
+    // How many blocks an explosion will travel
+    explosionRadius: number;
 
-export type PowerUpConfig = {
+    // Number of seconds an explosion will last
+    explosionDuration: number;
 
+    // Number of bombs the player can place at any given time
+    bombCount: number;
+
+    // Numer of seconds before bomb will detonate
+    bombTimer: number;
 };
+
+export type StatType = keyof StatsConfig;
+
+export type PowerUp = {
+    type: StatType;
+    
+}
 
 export type GameSettings = {
 
@@ -36,19 +43,19 @@ export type GameSettings = {
     // Bot difficulty
     difficulty: 'easy' | 'medium' | 'hard';
 
-    // Starting speed of all players
-    initialSpeed: number;
-
-    // Blocks per second
-    speedCap: number;
-
     // Tickrate to preform fixed updates (i.e., movement)
     tickrate: number;
 
     // Percentage of brick spawns
     brickSpawnPercentage: number;
 
-    // powerups: { [type: PowerUpType]: PowerUpConfig}
+    // Permitted settings
+    statsSettings: {
+        [key in StatType]: { min: number, max: number }
+    },
+
+    // Settings of all of the starting players
+    detaultStats: StatsConfig,
 
     statusBoard?: {
         alignment: 'left' | 'right';

@@ -4,7 +4,7 @@ import GameMap, { CellType } from "./game-map";
 import Player, { Bomb, Direction } from "./player";
 import { RandomAIInputController, UserInputController } from "./player-controller";
 import StatusBoard, { PlayerRow } from "./graphics/statusboard";
-import { GameSettings, Position, Resources } from "./types";
+import { GameSettings, Position, StatType, Resources } from "./types";
 import { AbsoluteContainer } from "./graphics/absolute-container";
 
 type Explosion = {
@@ -131,11 +131,7 @@ export default class Game {
             new UserInputController(),
             {
                 position: startingPositions[0],
-                speed: this.settings.initialSpeed,
-                bombCount: 1,
-                bombExplosionRadius: 5,
-                bombExplosionDuration: 5,
-                bombTimer: 3
+                stats: Object.assign({}, this.settings.detaultStats)
             }
         ));
 
@@ -148,11 +144,7 @@ export default class Game {
                     new RandomAIInputController(),
                     {
                         position: startingPositions[i + 1],
-                        speed: this.settings.initialSpeed,
-                        bombCount: 1,
-                        bombExplosionRadius: 5,
-                        bombExplosionDuration: 1,
-                        bombTimer: 3
+                        stats: Object.assign({}, this.settings.detaultStats)
                     }
                 )
             )
@@ -404,13 +396,13 @@ export default class Game {
     start() {
         
         this.started = true;
-        
+
         if (this.statusBoard) {
             this.statusBoard.update(this.players.map((p, i) => ({
                 position: i,
                 playerName: 'Player ' + i,
                 colour: 0xEA4C46,
-                powerups: {}
+                playerStats: p.stats
             })), this.cellWidth * this.settings.map.props.height);
         }
         this.renderGrid(true);
@@ -574,7 +566,7 @@ export default class Game {
             }
 
             if (player.inTransition) {  
-                player.moveTransitionPercent += player.speed  / this.settings.tickrate;
+                player.moveTransitionPercent += player.stats.speed  / this.settings.tickrate;
                 player.moveTransitionPercent = Math.min(player.moveTransitionPercent, 1);
 
                 if (player.moveTransitionDirection === Direction.UP) {

@@ -1,5 +1,5 @@
 import { AnimatedSprite, Graphics, graphicsUtils } from "pixi.js";
-import { Position } from "./types";
+import { Position, StatsConfig } from "./types";
 import { PlayerController } from "./player-controller";
 
 export enum Direction {
@@ -11,11 +11,7 @@ export enum Direction {
 
 type PlayerConfiguration = {
     position: Position;
-    speed: number;
-    bombCount: number;
-    bombExplosionRadius: number;
-    bombExplosionDuration: number;
-    bombTimer: number;
+    stats: StatsConfig;
 };
 
 export type Bomb = {
@@ -30,7 +26,6 @@ export type Bomb = {
     slidingSpeed: number;
     slidingDirection?: Direction;
 };
-
 
 export default class Player {
 
@@ -50,11 +45,12 @@ export default class Player {
     position: Position;
     cellPosition: Position;
 
-    powerups: any;
-    speed: number;
-    bombExplosionRadius: number;
-    bombExplosionDuration: number;
-    bombTimer: number;
+    stats: StatsConfig;
+    // powerups: any;
+    // speed: number;
+    // bombExplosionRadius: number;
+    // bombExplosionDuration: number;
+    // bombTimer: number;
 
     isAlive: boolean;
 
@@ -71,12 +67,14 @@ export default class Player {
         this.moveTransitionPercent = 0;
         this.cellPosition = Object.assign({}, settings.position);
         this.position = Object.assign({}, settings.position);
-        this.speed = settings.speed;
-        this.bombCount = settings.bombCount;
-        this.bombTimer = settings.bombTimer;
-        this.bombExplosionRadius = settings.bombExplosionRadius;
-        this.bombExplosionDuration = settings.bombExplosionDuration;
+        this.stats = settings.stats;
         this.bombs = [];
+
+        // this.speed = settings.speed;
+        // this.bombCount = settings.bombCount;
+        // this.bombTimer = settings.bombTimer;
+        // this.bombExplosionRadius = settings.bombExplosionRadius;
+        // this.bombExplosionDuration = settings.bombExplosionDuration;
     }
 
     setMoving(direction: Direction) {
@@ -89,10 +87,10 @@ export default class Player {
         this.bombs.push({
             graphic: null,
             position: { x: Math.round(this.position.x), y: Math.round(this.position.y) },
-            explosionRadius: this.bombExplosionRadius,
-            explosionDuration: this.bombExplosionDuration,
+            explosionRadius: this.stats.explosionRadius,
+            explosionDuration: this.stats.explosionDuration,
             timePlaced: (new Date()).getTime(),
-            timer: this.bombTimer,
+            timer: this.stats.bombTimer,
             addedToCanvas: false,
             isSliding: false,
             slidingSpeed: 5

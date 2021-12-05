@@ -83,10 +83,22 @@ export default class App {
             map: GameMap.loadFromFile(mapString),
             bots: 1,
             difficulty: 'easy',
-            initialSpeed: 3,
-            speedCap: 10,
             tickrate: 64,
             brickSpawnPercentage: 0.3,
+            statsSettings: {
+                speed: { min: 1, max: 8 },
+                explosionRadius: { min: 2, max: 10 },
+                explosionDuration: { min: 0.2, max: 1 },
+                bombCount: { min: 1, max: 5 },
+                bombTimer: { min: 0.2, max: 5 }
+            },
+            detaultStats: {
+                speed: 3,
+                explosionDuration: 0.5,
+                explosionRadius: 2,
+                bombCount: 1,
+                bombTimer: 3
+            },
             statusBoard: {
                 alignment: 'left',
                 splitRatio: 0.2

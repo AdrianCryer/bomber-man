@@ -1,12 +1,12 @@
 import * as PIXI from "pixi.js";
-import { Position, PowerUpConfig, Resources, Size } from "../types";
+import { Position, StatsConfig, Resources, Size } from "../types";
 import { AbsoluteContainer } from "./absolute-container";
 
 export type PlayerRow = {
     position: number;
     playerName: string;
+    playerStats: StatsConfig;
     colour: number;
-    powerups: PowerUpConfig;
 };
 
 const PLAYER_ROW_HEIGHT_RATIO = 0.1;

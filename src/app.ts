@@ -2,11 +2,12 @@ import * as PIXI from "pixi.js"
 import { SCALE_MODES } from "pixi.js";
 import Game from "./game";
 import GameMap from "./game-map";
-import StatusBoard from "./statusboard";
+import StatusBoard from "./graphics/statusboard";
 import { GameSettings } from "./types";
 
 import basicMap from "../maps/basic.txt";
 import retroMap from "../maps/retro.txt";
+import { AbsoluteContainer } from "./graphics/absolute-container";
 
 
 const assets = {    
@@ -24,8 +25,7 @@ export default class App {
     app: PIXI.Application;
     
     game: Game;
-    gameContainer: PIXI.Container;
-    gameRoot: PIXI.Graphics;
+    gameContainer: AbsoluteContainer;
     
     StatusBoard: StatusBoard;
 
@@ -54,15 +54,19 @@ export default class App {
             this.app.loader.add(name, path);
         }
 
-        this.gameContainer = new PIXI.Container();
-        this.gameContainer.scale.set(this.app.screen.width, this.app.screen.height);
+        const { width, height } = this.app.screen;
+        this.gameContainer = new AbsoluteContainer(0, 0, width, height);
+        this.gameContainer.sortableChildren = true;
+
         this.app.renderer.backgroundColor = 0x564dff;
         this.app.stage.addChild(this.gameContainer);
     }
 
     resize() {
         this.app.renderer.resize(window.innerWidth, window.innerHeight);
-        this.gameContainer.scale.set(this.app.screen.width, this.app.screen.height);
+
+        // Just don't set the scale of the container, instead, set the bounds
+        this.gameContainer.setBounds(new PIXI.Rectangle(0, 0, this.app.screen.width, this.app.screen.height));
 
         if (this.game) {
             this.game.resize();

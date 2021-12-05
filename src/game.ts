@@ -3,8 +3,9 @@ import { Graphics, Sprite } from "pixi.js";
 import GameMap, { CellType } from "./game-map";
 import Player, { Bomb, Direction } from "./player";
 import { RandomAIInputController, UserInputController } from "./player-controller";
-import StatusBoard from "./statusboard";
+import StatusBoard from "./graphics/statusboard";
 import { GameSettings, Position, Resources } from "./types";
+import { AbsoluteContainer } from "./graphics/absolute-container";
 
 type Explosion = {
     center: Position;
@@ -36,7 +37,7 @@ type GameCell = {
 export default class Game {
 
     settings: GameSettings;
-    container: PIXI.Container;
+    container: AbsoluteContainer;
     resources: Resources;
     ticker: PIXI.Ticker;
 
@@ -44,52 +45,64 @@ export default class Game {
     players: Player[];
     cells: GameCell[][];
     time: number;
-
-    /** Contains the game's grid and playable contents */
-    gridContainer: PIXI.Container;
-
-    /** Status board */
-    statusBoardContainer: PIXI.Container;
+    
     statusBoard: StatusBoard;
 
+    /** Contains the game's grid and playable contents */
+    gridContainer: AbsoluteContainer;
     cellsContainer: PIXI.Container;
     itemsContainer: PIXI.Container;
-    relativeCellWidth: { x: number; y: number; };
-    cellWidth: number;
 
-    constructor(container: PIXI.Container, ticker: PIXI.Ticker, resources: Resources, settings: GameSettings) {
+    cellWidth: number;
+    started: boolean;
+
+    constructor(container: AbsoluteContainer, ticker: PIXI.Ticker, resources: Resources, settings: GameSettings) {
 
         this.container = container;
         this.ticker = ticker;
         this.resources = resources;
         this.settings = settings;
+        this.started = false;
 
-        this.container.sortableChildren = true;
-
-        this.gridContainer = new PIXI.Container();
+        this.gridContainer = AbsoluteContainer.fromParent(container);
         this.gridContainer.sortableChildren = true;
-        
         this.container.addChild(this.gridContainer);
+        
+        if (this.settings.statusBoard) {
+            this.statusBoard = new StatusBoard(this.container.getBounds());
+            this.container.addChild(this.statusBoard);
+        }
+
+        this.resize();
+        this.calculateGridCellSize();
+        this.setupGame();
+    }
+
+    resize() {
 
         if (this.settings.statusBoard) {
-            this.statusBoardContainer = new PIXI.Container();
-            this.container.addChild(this.statusBoardContainer);
-
-            // Setup scale
             const { alignment, splitRatio } = this.settings.statusBoard;
-            if (alignment === 'right') {
-                this.statusBoardContainer.position.set(1 - splitRatio, 0);
-            } else {
-                this.gridContainer.position.set(splitRatio, 0);
-            }
-            this.statusBoardContainer.scale.set(splitRatio, 1);
-            this.gridContainer.scale.set(1 - splitRatio, 1);
+            
+            const split = alignment == 'left' ? splitRatio : 1 - splitRatio ; 
+            const [boundsLeft, boundsRight] = AbsoluteContainer.horizontalSplit(this.container, split);
 
-            this.statusBoard = new StatusBoard(this.statusBoardContainer, resources);
+            if (alignment === 'left') {
+                this.statusBoard.setBounds(boundsLeft);
+                this.gridContainer.setBounds(boundsRight);
+                this.gridContainer.position.set(boundsRight.x, boundsRight.y);
+            } else {
+                this.gridContainer.setBounds(boundsLeft);
+                this.statusBoard.setBounds(boundsRight);
+                this.statusBoard.position.set(boundsRight.x, boundsRight.y);
+            }
         }
 
         this.calculateGridCellSize();
-        this.setupGame();
+
+        if (this.started) {
+            this.renderGrid(false);
+            this.statusBoard.update();
+        }
     }
 
     setupGame() {
@@ -192,21 +205,17 @@ export default class Game {
     }
 
     calculateGridCellSize() { 
-        const gridWidthScalar = this.settings.statusBoard ? (1 - this.settings.statusBoard.splitRatio) : 1;
-
+        // const gridWidthScalar = this.settings.statusBoard ? (1 - this.settings.statusBoard.splitRatio) : 1;
+        //   * gridWidthScalar
         this.cellWidth = Math.min(
-            this.container.scale.x / this.settings.map.props.width  * gridWidthScalar,
-            this.container.scale.y / this.settings.map.props.height
+            this.gridContainer.getBounds().width / this.settings.map.props.width,
+            this.gridContainer.getBounds().height / this.settings.map.props.height
         );
-        this.relativeCellWidth = {
-            x: this.cellWidth / this.container.scale.x / gridWidthScalar,
-            y: this.cellWidth / this.container.scale.y,
-        };
-    }
-
-    resize() {
-        this.calculateGridCellSize();
-        this.renderGrid(false);
+        console.log(this.cellWidth)
+        // this.relativeCellWidth = {
+        //     x: this.cellWidth / this.container.scale.x / gridWidthScalar,
+        //     y: this.cellWidth / this.container.scale.y,
+        // };
     }
 
     renderCell(x: number, y: number, cell: GameCell, intialPass=false) {
@@ -224,10 +233,10 @@ export default class Game {
 
         cell.graphic.texture.baseTexture.scaleMode = PIXI.SCALE_MODES.NEAREST;
 
-        cell.graphic.position.x = x * this.relativeCellWidth.x;
-        cell.graphic.position.y = y * this.relativeCellWidth.y;
-        cell.graphic.width = this.relativeCellWidth.x;
-        cell.graphic.height = this.relativeCellWidth.y;
+        cell.graphic.position.x = x * this.cellWidth;
+        cell.graphic.position.y = y * this.cellWidth;
+        cell.graphic.width = this.cellWidth;
+        cell.graphic.height = this.cellWidth;
 
         if (intialPass) {
             cell.graphic.zIndex = 0;
@@ -250,10 +259,10 @@ export default class Game {
             player.graphic
                 .beginFill(0xEA4C46)
                 .drawRect(
-                    (0.25 + player.position.x) * this.relativeCellWidth.x, 
-                    (0.25 + player.position.y) * this.relativeCellWidth.y, 
-                    this.relativeCellWidth.x / 2,
-                    this.relativeCellWidth.y / 2
+                    (0.25 + player.position.x) * this.cellWidth, 
+                    (0.25 + player.position.y) * this.cellWidth, 
+                    this.cellWidth / 2,
+                    this.cellWidth / 2
                 )
                 .endFill();
             if (initialPass) {
@@ -276,10 +285,10 @@ export default class Game {
             this.gridContainer.addChild(bomb.graphic);
         }
         
-        bomb.graphic.width = this.relativeCellWidth.x;
-        bomb.graphic.height = this.relativeCellWidth.y;
-        bomb.graphic.position.x = bomb.position.x * this.relativeCellWidth.x;
-        bomb.graphic.position.y = bomb.position.y * this.relativeCellWidth.y;
+        bomb.graphic.width = this.cellWidth;
+        bomb.graphic.height = this.cellWidth;
+        bomb.graphic.position.x = bomb.position.x * this.cellWidth;
+        bomb.graphic.position.y = bomb.position.y * this.cellWidth;
     }
 
     renderExplosionCell(explosionCell: ExplosionCell) {
@@ -304,15 +313,15 @@ export default class Game {
             this.gridContainer.addChild(explosionCell.graphic);
         }
         
-        const x = (0.5 + explosionCell.position.x) * this.relativeCellWidth.x;
-        const y = (0.5 + explosionCell.position.y) * this.relativeCellWidth.y;
+        const x = (0.5 + explosionCell.position.x) * this.cellWidth;
+        const y = (0.5 + explosionCell.position.y) * this.cellWidth;
         explosionCell.graphic.position.set(x, y);
         
         const texture = explosionCell.graphic.texture;
         explosionCell.graphic.pivot.set(texture.width / 2, texture.height / 2);
 
-        const scaleX = this.relativeCellWidth.x / texture.width;
-        const scaleY = this.relativeCellWidth.y / texture.height;
+        const scaleX = this.cellWidth / texture.width;
+        const scaleY = this.cellWidth / texture.height;
         if (explosionCell.graphic.angle == 90 || explosionCell.graphic.angle == 270) {
             explosionCell.graphic.scale.set(scaleY, scaleX);
         } else {
@@ -393,8 +402,11 @@ export default class Game {
     }
 
     start() {
+        
+        this.started = true;
+        
         if (this.statusBoard) {
-            this.statusBoard.render();
+            this.statusBoard.update();
         }
         this.renderGrid(true);
         this.ticker.add(() => {

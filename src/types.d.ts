@@ -3,6 +3,7 @@ import { Graphics } from "pixi.js";
 import GameMap from "./game-map";
 
 export type Resources = PIXI.utils.Dict<PIXI.LoaderResource>;
+export type GameRenderable<T, S extends PIXI.Container> = T & { graphic?: S, addedToCanvas: boolean };
 
 export type Position = { x: number; y: number };
 
@@ -27,10 +28,17 @@ export type StatsConfig = {
 
 export type StatType = keyof StatsConfig;
 
+export type PowerUpType = {
+    name: string;
+    stat: string;
+    delta: number;
+    rarity: number;
+};
+
 export type PowerUp = {
-    type: StatType;
-    
-}
+    position: Position;
+    type: PowerUpType;
+};
 
 export type GameSettings = {
 
@@ -47,15 +55,24 @@ export type GameSettings = {
     tickrate: number;
 
     // Percentage of brick spawns
-    brickSpawnPercentage: number;
+    brickSpawnChance: number;
+    
+    // Chance that a powerup will spawn on breaking a brick
+    powerupSpawnChance: number;
 
     // Permitted settings
     statsSettings: {
         [key in StatType]: { min: number, max: number }
-    },
+    };
 
     // Settings of all of the starting players
-    detaultStats: StatsConfig,
+    detaultStats: StatsConfig;
+
+    // Types of powerups that can drop in the game.
+    powerups: PowerUpType[];
+
+    // Function to determine which tier of powerup to drop
+    powerupRarityStepFunction: (maxRarity: number, val: number) => number;
 
     statusBoard?: {
         alignment: 'left' | 'right';

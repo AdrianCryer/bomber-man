@@ -4,7 +4,7 @@ import GameMap, { CellType } from "./game-map";
 import Player, { Bomb, Direction } from "./player";
 import { RandomAIInputController, UserInputController } from "./player-controller";
 import StatusBoard, { PlayerRow } from "./graphics/statusboard";
-import { GameSettings, Position, StatType, Resources } from "./types";
+import { GameSettings, Position, StatType, Resources, PowerUp, GameRenderable } from "./types";
 import { AbsoluteContainer } from "./graphics/absolute-container";
 
 type Explosion = {
@@ -32,7 +32,7 @@ type Brick = GameCell & {
 type GameCell = {
     graphic: PIXI.Sprite;
     type: CellType;
-}
+};
 
 export default class Game {
 
@@ -41,6 +41,7 @@ export default class Game {
     resources: Resources;
     ticker: PIXI.Ticker;
 
+    powerups: GameRenderable<PowerUp, Graphics>[];
     explosions: Explosion[];
     players: Player[];
     cells: GameCell[][];
@@ -123,6 +124,7 @@ export default class Game {
         // Setup players
         this.players = [];
         this.explosions = [];
+        this.powerups = [];
 
         // Add human player
         this.players.push(new Player(
@@ -189,7 +191,7 @@ export default class Game {
             for (let j = 0; j < width; j++) {
 
                 if (this.cells[i][j].type === CellType.OPEN && 
-                    Math.random() <= this.settings.brickSpawnPercentage) {
+                    Math.random() <= this.settings.brickSpawnChance) {
                     this.cells[i][j] = this.createCell(CellType.BRICK, 'brick');
                 }
             }
@@ -327,6 +329,27 @@ export default class Game {
         }
     }
 
+    renderPowerup(powerup: GameRenderable<PowerUp, Graphics>) {
+
+        if (!powerup.addedToCanvas) {
+            powerup.graphic = new PIXI.Graphics();
+            this.gridContainer.addChild(powerup.graphic);
+            powerup.addedToCanvas = true;
+        }
+
+        powerup.graphic.clear();
+        powerup.graphic
+            .beginFill(0x006ee6)
+            .drawRoundedRect(
+                (0.25 + powerup.position.x) * this.cellWidth, 
+                (0.25 + powerup.position.y) * this.cellWidth, 
+                this.cellWidth / 2,
+                this.cellWidth / 2,
+                5
+            )
+            .endFill();
+    }
+
     getCellsAffectedByExplosion(centre: Position, radius: number, power: number): ExplosionCell[] {
 
         let { x, y } = centre;
@@ -384,6 +407,11 @@ export default class Game {
             let cell = this.cells[pos.y][pos.x];
             if (cell.type === CellType.BRICK) {
                 
+                // Try spawn power up at center 
+                if (Math.random() < this.settings.powerupSpawnChance) {
+                    this.spawnPowerup(pos);
+                }
+
                 this.gridContainer.removeChild(cell.graphic);
                 this.cells[pos.y][pos.x] = this.createCell(CellType.OPEN, 'open');
 
@@ -391,6 +419,20 @@ export default class Game {
                 this.renderCell(pos.x, pos.y, this.cells[pos.y][pos.x], true);
             }
         }
+    }
+
+    spawnPowerup(position: Position) {
+        
+        const maxRarity = Math.max(...this.settings.powerups.map(p => p.rarity));
+        const powerupTier = this.settings.powerupRarityStepFunction(maxRarity, Math.random());
+        const allPowerups = this.settings.powerups.filter(p => p.rarity === powerupTier);
+        console.log("SPAWNING TIER", powerupTier, maxRarity);
+
+        this.powerups.push({
+            position,
+            type: allPowerups[Math.floor(Math.random() * allPowerups.length)],
+            addedToCanvas: false,
+        });
     }
 
     start() {
@@ -599,6 +641,9 @@ export default class Game {
         }
         for (let explosion of this.explosions) {
             this.renderExplosion(explosion)
+        }
+        for (let powerup of this.powerups) {
+            this.renderPowerup(powerup);
         }
     }
 }

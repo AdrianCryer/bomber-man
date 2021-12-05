@@ -84,7 +84,8 @@ export default class App {
             bots: 1,
             difficulty: 'easy',
             tickrate: 64,
-            brickSpawnPercentage: 0.3,
+            brickSpawnChance: 0.3,
+            powerupSpawnChance: 1,
             statsSettings: {
                 speed: { min: 1, max: 8 },
                 explosionRadius: { min: 2, max: 10 },
@@ -95,9 +96,18 @@ export default class App {
             detaultStats: {
                 speed: 3,
                 explosionDuration: 0.5,
-                explosionRadius: 2,
+                explosionRadius: 5,
                 bombCount: 1,
                 bombTimer: 3
+            },
+            powerups:  [
+                { name: 'Speed Up', stat: 'speed', delta: 1, rarity: 1 },
+                { name: 'Bomb range up', stat: 'explosionRadius', delta: 1, rarity: 1 },
+                { name: 'Bib bombs', stat: 'explosionRadius', delta: 3, rarity: 2 }
+            ],
+            powerupRarityStepFunction: (maxRarity: number, val: number) => {
+                console.log( Math.floor(maxRarity * val**2), val**2, val)
+                return Math.floor(maxRarity * val**2) + 1;
             },
             statusBoard: {
                 alignment: 'left',

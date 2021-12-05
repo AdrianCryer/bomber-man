@@ -102,7 +102,13 @@ export default class Game {
 
         if (this.started) {
             this.renderGrid(false);
-            this.statusBoard.update([], this.cellWidth * this.settings.map.props.height);
+            this.statusBoard.update(this.players.map((p, i) => ({
+                position: i,
+                playerName: 'Player ' + i,
+                colour: 0xEA4C46,
+                playerStats: p.stats
+            })), this.cellWidth * this.settings.map.props.height);
+            // this.statusBoard.update([], this.cellWidth * this.settings.map.props.height);
         }
     }
 
@@ -340,6 +346,7 @@ export default class Game {
         powerup.graphic.clear();
         powerup.graphic
             .beginFill(0x006ee6)
+            .lineStyle({ width: 1, color: 0x26 })
             .drawRoundedRect(
                 (0.25 + powerup.position.x) * this.cellWidth, 
                 (0.25 + powerup.position.y) * this.cellWidth, 
@@ -621,12 +628,33 @@ export default class Game {
                     player.position.x = player.cellPosition.x + player.moveTransitionPercent;
                 }
 
+                // Reached next cell
                 if (player.moveTransitionPercent === 1) {
-                    player.inTransition = false;
-                    player.cellPosition = {
+                    const nextPos = {
                         x: Math.round(player.position.x),
-                        y: Math.round(player.position.y),
+                        y: Math.round(player.position.y)
                     };
+                    player.inTransition = false;
+                    player.cellPosition = nextPos;
+
+                    // If contains powerup
+                    for (let [i, powerup] of this.powerups.entries()) {
+                        if (powerup.position.x === nextPos.x && powerup.position.y === nextPos.y) {
+                            
+                            // Apply and destroy powerup
+                            player.stats[powerup.type.stat] += powerup.type.delta;
+                            this.gridContainer.removeChild(powerup.graphic);
+                            this.powerups.splice(i, 1);
+
+                            // Update statusboard
+                            this.statusBoard.update(this.players.map((p, i) => ({
+                                position: i,
+                                playerName: 'Player ' + i,
+                                colour: 0xEA4C46,
+                                playerStats: p.stats
+                            })), this.cellWidth * this.settings.map.props.height);
+                        }
+                    }
                 }
             }
         }

@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { Position, StatsConfig, Resources, Size } from "../types";
+import { Position, StatsConfig, Resources, Size, StatType } from "../types";
 import { AbsoluteContainer } from "./absolute-container";
 
 export type PlayerRow = {
@@ -10,7 +10,15 @@ export type PlayerRow = {
 };
 
 const PLAYER_ROW_HEIGHT_RATIO = 0.1;
-const PLAYER_ROW_OFFSET = 75;
+const PLAYER_ROW_OFFSET = 60;
+
+const STAT_LABELS: Record<StatType, string> = {
+    speed: 'Speed',
+    explosionRadius: 'Bomb Range',
+    explosionDuration: 'Bomb Duration',
+    bombCount: 'Bombs',
+    bombTimer: 'Bomb Timer'
+};
 
 export default class StatusBoard extends AbsoluteContainer {
 
@@ -37,8 +45,12 @@ export default class StatusBoard extends AbsoluteContainer {
         this.renderFrame(frameHeight);
         this.renderTitle();
 
-        for (let playerRow of this.playerRows) {
-            this.renderPlayerRow(playerRow);
+        const rowHeight = this.bounds.width * PLAYER_ROW_HEIGHT_RATIO;
+        const offset = Object.keys(this.playerRows[0].playerStats || {}).length * rowHeight;
+
+        for (let [i, playerRow] of this.playerRows.entries()) {
+            this.renderPlayerTitle(playerRow, PLAYER_ROW_OFFSET + (offset + 2 * rowHeight) * i);
+            this.renderPlayerPowerups(playerRow, PLAYER_ROW_OFFSET + (offset + 2 * rowHeight) * i + rowHeight);
         }
     }
 
@@ -54,10 +66,10 @@ export default class StatusBoard extends AbsoluteContainer {
     }
 
     renderTitle() {
-        const title = new PIXI.Text("Bomberman", {
+        const title = new PIXI.Text("STATS", {
             fontFamily: "oldschool",
             fontStyle: "normal",
-            fontSize: 24,
+            fontSize: 20,
             fill: '#262626'
         });
         this.addChild(title);
@@ -67,17 +79,40 @@ export default class StatusBoard extends AbsoluteContainer {
         title.anchor.x = 0.5 + (this.padding / this.getBounds().width);
     } 
 
-    renderPlayerRow(playerRow: PlayerRow) {
+    renderPlayerPowerups(playerRow: PlayerRow, yOffset: number) {
 
         const rowHeight = this.bounds.width * PLAYER_ROW_HEIGHT_RATIO;
-        const yPos = rowHeight * playerRow.position + PLAYER_ROW_OFFSET;
 
+        for (let [i, stat] of Object.keys(playerRow.playerStats).entries()) {
+            const cell = new PIXI.Graphics();
+            const yPos = yOffset + i * rowHeight;
+            cell
+                .beginFill(0x006ee6)
+                .lineStyle({ width: 2, color: 0x262626 })
+                .drawRoundedRect(this.padding, yPos, rowHeight, rowHeight, 5)
+                .endFill();
+            const statText = new PIXI.Text(playerRow.playerStats[stat as StatType].toString(), {
+                fontFamily: "oldschool",
+                fontStyle: "normal",
+                fontSize: `${Math.floor(rowHeight)}px`,
+                fill: '#262626'
+            });
+            statText.x = 1.5 * this.padding + rowHeight;
+            statText.position.set(1.5 * this.padding + rowHeight, yPos);
+            this.addChild(cell);
+            this.addChild(statText);
+        }
+    }
+
+    renderPlayerTitle(playerRow: PlayerRow, yOffset: number) {
+
+        const rowHeight = this.bounds.width * PLAYER_ROW_HEIGHT_RATIO;
         const icon = new PIXI.Graphics();
         icon.clear();
         icon
             .beginFill(playerRow.colour)
             .lineStyle({ width: 2, color: 0x262626 })
-            .drawRoundedRect(this.padding, yPos, rowHeight, rowHeight, 5)
+            .drawRoundedRect(this.padding, yOffset, rowHeight, rowHeight, 5)
             .endFill();
 
         const playerTitle =  new PIXI.Text(playerRow.playerName, {
@@ -87,7 +122,7 @@ export default class StatusBoard extends AbsoluteContainer {
             fill: '#262626'
         });
         playerTitle.x = 1.5 * this.padding + rowHeight;
-        playerTitle.position.set(1.5 * this.padding + rowHeight, yPos);
+        playerTitle.position.set(1.5 * this.padding + rowHeight, yOffset);
 
         this.addChild(playerTitle);
         this.addChild(icon);

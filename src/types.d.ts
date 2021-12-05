@@ -30,7 +30,7 @@ export type StatType = keyof StatsConfig;
 
 export type PowerUpType = {
     name: string;
-    stat: string;
+    stat: StatType;
     delta: number;
     rarity: number;
 };

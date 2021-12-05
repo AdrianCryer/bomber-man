@@ -3,7 +3,7 @@ import { Graphics, Sprite } from "pixi.js";
 import GameMap, { CellType } from "./game-map";
 import Player, { Bomb, Direction } from "./player";
 import { RandomAIInputController, UserInputController } from "./player-controller";
-import StatusBoard from "./graphics/statusboard";
+import StatusBoard, { PlayerRow } from "./graphics/statusboard";
 import { GameSettings, Position, Resources } from "./types";
 import { AbsoluteContainer } from "./graphics/absolute-container";
 
@@ -101,7 +101,7 @@ export default class Game {
 
         if (this.started) {
             this.renderGrid(false);
-            this.statusBoard.update();
+            this.statusBoard.update([], this.cellWidth * this.settings.map.props.height);
         }
     }
 
@@ -406,7 +406,12 @@ export default class Game {
         this.started = true;
         
         if (this.statusBoard) {
-            this.statusBoard.update();
+            this.statusBoard.update(this.players.map((p, i) => ({
+                position: i,
+                playerName: 'Player ' + i,
+                colour: 0xEA4C46,
+                powerups: {}
+            })), this.cellWidth * this.settings.map.props.height);
         }
         this.renderGrid(true);
         this.ticker.add(() => {

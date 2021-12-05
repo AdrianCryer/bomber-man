@@ -31,6 +31,8 @@
     "wepack-cli": "0.0.1-security"
   },
   "dependencies": {
+    "@types/fontfaceobserver": "^2.1.0",
+    "fontfaceobserver": "^2.1.0",
     "pixi.js": "^6.2.0"
   }
 }

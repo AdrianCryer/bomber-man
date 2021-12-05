@@ -1,5 +1,6 @@
 import * as PIXI from "pixi.js"
 import { SCALE_MODES } from "pixi.js";
+import FontFaceObserver from "fontfaceobserver";
 import Game from "./game";
 import GameMap from "./game-map";
 import StatusBoard from "./graphics/statusboard";
@@ -15,8 +16,7 @@ const assets = {
     "open": "../assets/open-sprite.png",
     "brick": "../assets/brick-sprite.png",
     "bomb": "../assets/bomb-spritesheet.json",
-    "explosion": "../assets/explosion-spritesheet.json",
-    '04B_30__': '../assets/fonts/04B_30__.TTF'
+    "explosion": "../assets/explosion-spritesheet.json"
 };
 
 export default class App {
@@ -74,6 +74,10 @@ export default class App {
     }
 
     async setup() {
+
+        const font = new FontFaceObserver("oldschool");
+        await font.load();
+
         const mapString = await GameMap.loadMapFile(retroMap);
         const settings: GameSettings = {
             map: GameMap.loadFromFile(mapString),

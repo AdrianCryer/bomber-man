@@ -16,7 +16,8 @@ const assets = {
     "open": "../assets/open-sprite.png",
     "brick": "../assets/brick-sprite.png",
     "bomb": "../assets/bomb-spritesheet.json",
-    "explosion": "../assets/explosion-spritesheet.json"
+    "explosion": "../assets/explosion-spritesheet.json",
+    "skull": "../assets/skull.png"
 };
 
 export default class App {
@@ -75,16 +76,28 @@ export default class App {
     }
 
     setupModal() {
+
+        const texture = this.app.loader.resources['skull'].texture;
+        const skull = new PIXI.Sprite(texture);
+        skull.texture.baseTexture.scaleMode = PIXI.SCALE_MODES.NEAREST;
+        skull.width = 120;
+        skull.height = 120;
+        skull.anchor.set(0.5, 0.5);
+        skull.tint = 0x262626;
+
         this.gameOverModal = new Modal(this.screenBounds, {
-            padding: 20,
+            padding: 40,
             title: "You Loose",
-            showCloseButton: true,
             showCancelButton: false,
             focusConfirm: true,
-            confirmButtonText: "Back To Menu",
+            cancelButtonText: "Retry",
+            confirmButtonText: "Menu",
             darkenBackground: true,
             modalWidthRatio: 0.5,
-            modalHeightRatio: 0.5
+            modalHeightRatio: 0.5,
+            icon: skull,
+            onConfirm: () => { console.log("Clicked confirm") },
+            onCancel: () => { console.log("Clicked cancel") },
         });
         this.gameOverModal.zIndex = 10;
         this.app.stage.addChild(this.gameOverModal);

@@ -205,17 +205,10 @@ export default class Game {
     }
 
     calculateGridCellSize() { 
-        // const gridWidthScalar = this.settings.statusBoard ? (1 - this.settings.statusBoard.splitRatio) : 1;
-        //   * gridWidthScalar
         this.cellWidth = Math.min(
             this.gridContainer.getBounds().width / this.settings.map.props.width,
             this.gridContainer.getBounds().height / this.settings.map.props.height
         );
-        console.log(this.cellWidth)
-        // this.relativeCellWidth = {
-        //     x: this.cellWidth / this.container.scale.x / gridWidthScalar,
-        //     y: this.cellWidth / this.container.scale.y,
-        // };
     }
 
     renderCell(x: number, y: number, cell: GameCell, intialPass=false) {

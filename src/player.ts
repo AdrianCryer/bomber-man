@@ -9,7 +9,7 @@ export enum Direction {
     RIGHT = 3,
 };
 
-type PlayerConfiguration = {
+type PlayerConfig = {
     position: Position;
     stats: StatsConfig;
 };
@@ -46,19 +46,13 @@ export default class Player {
     cellPosition: Position;
 
     stats: StatsConfig;
-    // powerups: any;
-    // speed: number;
-    // bombExplosionRadius: number;
-    // bombExplosionDuration: number;
-    // bombTimer: number;
-
     isAlive: boolean;
 
     get controller(): PlayerController {
         return this.playerController
     }
 
-    constructor(id: number, graphic: Graphics, playerController: PlayerController, settings: PlayerConfiguration) {
+    constructor(id: number, graphic: Graphics, playerController: PlayerController, settings: PlayerConfig) {
         this.id = id;
         this.graphic = graphic;
         this.playerController = playerController;
@@ -69,12 +63,7 @@ export default class Player {
         this.position = Object.assign({}, settings.position);
         this.stats = settings.stats;
         this.bombs = [];
-
-        // this.speed = settings.speed;
-        // this.bombCount = settings.bombCount;
-        // this.bombTimer = settings.bombTimer;
-        // this.bombExplosionRadius = settings.bombExplosionRadius;
-        // this.bombExplosionDuration = settings.bombExplosionDuration;
+        this.bombCount = 0;
     }
 
     setMoving(direction: Direction) {
@@ -83,7 +72,6 @@ export default class Player {
     }
 
     placeBomb() {
-
         this.bombs.push({
             graphic: null,
             position: { x: Math.round(this.position.x), y: Math.round(this.position.y) },
@@ -96,6 +84,5 @@ export default class Player {
             slidingSpeed: 5
         });
         this.bombCount -= 1;
-        console.log(this.bombs);
     }
 }

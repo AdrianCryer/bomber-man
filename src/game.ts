@@ -70,7 +70,7 @@ export default class Game {
         this.container.addChild(this.gridContainer);
         
         if (this.settings.statusBoard) {
-            this.statusBoard = new StatusBoard(this.container.getBounds());
+            this.statusBoard = new StatusBoard(this.container.getBounds(), resources);
             this.container.addChild(this.statusBoard);
         }
 
@@ -102,12 +102,7 @@ export default class Game {
 
         if (this.started) {
             this.renderGrid(false);
-            this.statusBoard.update(this.players.map((p, i) => ({
-                position: i,
-                playerName: 'Player ' + i,
-                colour: 0xEA4C46,
-                playerStats: p.stats
-            })), this.cellWidth * this.settings.map.props.height);
+            this.updateStatusboard();
             // this.statusBoard.update([], this.cellWidth * this.settings.map.props.height);
         }
     }
@@ -160,6 +155,7 @@ export default class Game {
 
         for (let player of this.players) {
             player.controller.setup(this, player);
+            player.isAlive = true;
         }
     }
 
@@ -248,6 +244,10 @@ export default class Game {
 
     renderPlayers(initialPass: boolean = false) {
         for (let player of this.players) {
+            if (!player.isAlive) {
+                player.graphic.clear();
+                continue;
+            }
             player.graphic.clear();
             player.graphic
                 .beginFill(0xEA4C46)
@@ -436,16 +436,11 @@ export default class Game {
     }
 
     start() {
-        
         this.started = true;
+        this.ticker.start();
 
         if (this.statusBoard) {
-            this.statusBoard.update(this.players.map((p, i) => ({
-                position: i,
-                playerName: 'Player ' + i,
-                colour: 0xEA4C46,
-                playerStats: p.stats
-            })), this.cellWidth * this.settings.map.props.height);
+            this.updateStatusboard();
         }
         this.renderGrid(true);
         this.ticker.add(() => {
@@ -507,10 +502,21 @@ export default class Game {
         return { x, y };
     }
 
+    
+    updateStatusboard() {
+        this.statusBoard.update(this.players.map((p, i) => ({
+            position: i,
+            playerName: 'Player ' + i,
+            colour: 0xEA4C46,
+            playerStats: p.stats,
+            isAlive: p.isAlive
+        })), this.cellWidth * this.settings.map.props.height);
+    }
+
     fixedUpdate(time: number) {
 
         for (let player of this.players) {
-            
+
             // Apply bombs
             for (let [i, bomb] of player.bombs.entries()) {
 
@@ -567,14 +573,8 @@ export default class Game {
                 }
             }
 
-            // Handle explosions
-            for (let [i, explosion] of this.explosions.entries()) {
-                if (time >= explosion.timeCreated + explosion.duration * 1000) {
-                    this.explosions.splice(i, 1);
-                    for (let explosionCell of explosion.affectedCells) {
-                        this.gridContainer.removeChild(explosionCell.graphic);
-                    }
-                }
+            if (!player.isAlive) {
+                continue;
             }
 
             // Apply movement
@@ -640,14 +640,31 @@ export default class Game {
                             this.powerups.splice(i, 1);
 
                             // Update statusboard
-                            this.statusBoard.update(this.players.map((p, i) => ({
-                                position: i,
-                                playerName: 'Player ' + i,
-                                colour: 0xEA4C46,
-                                playerStats: p.stats
-                            })), this.cellWidth * this.settings.map.props.height);
+                            this.updateStatusboard();
                         }
                     }
+                }
+            }
+
+            for (let explosion of this.explosions) {
+                for (let cell of explosion.affectedCells) {
+                    if (player.cellPosition.x === cell.position.x && 
+                        player.cellPosition.y === cell.position.y) {
+                        
+                        // Kill player
+                        player.isAlive = false;
+                        this.updateStatusboard();
+                    }
+                }
+            }
+        }
+
+        // Handle explosions
+        for (let [i, explosion] of this.explosions.entries()) {
+            if (time >= explosion.timeCreated + explosion.duration * 1000) {
+                this.explosions.splice(i, 1);
+                for (let explosionCell of explosion.affectedCells) {
+                    this.gridContainer.removeChild(explosionCell.graphic);
                 }
             }
         }

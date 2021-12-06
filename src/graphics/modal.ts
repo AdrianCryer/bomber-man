@@ -45,7 +45,7 @@ export default class Modal extends AbsoluteContainer {
         this.confirmButton = new Button({
             text: options.confirmButtonText,
             textOptions: {
-                fontFamily: "oldschool",
+                fontFamily: "arial",
                 fontSize: "20px",
                 fill: "#ffffff"
             },
@@ -61,12 +61,13 @@ export default class Modal extends AbsoluteContainer {
             this.cancelButton = new Button({
                 text: options.cancelButtonText,
                 textOptions: {
-                    fontFamily: "oldschool",
-                    fontSize: "20px"
+                    fontFamily: "arial",
+                    fontSize: "20px",
+                    fill: "#ffffff"
                 },
-                backgroundColour: 0x262626,
-                hoverColour: 0x444444,
-                borderRadius: 10,
+                backgroundColour: 0x006ee6,
+                hoverColour: 0x4787cc,
+                borderRadius: 5,
                 onClick: options.onCancel
             });
             this.addChild(this.cancelButton);
@@ -91,16 +92,37 @@ export default class Modal extends AbsoluteContainer {
         this.addChild(title);
     }
 
-    drawConfirmButton() {
+    drawButtons() {
         const width = this.getBounds().width * this.options.modalWidthRatio;
-        const height = this.getBounds().height * this.options.modalWidthRatio;
+        const height = this.getBounds().height * this.options.modalHeightRatio;
+        const BUTTON_WIDTH = 0.2;
+        const BUTTON_HEIGHT = 0.1;
 
-        this.confirmButton.setBounds(new Rectangle(
-            this.modalBounds.x + width / 2 - width * 0.1,
-            this.modalBounds.y + height - this.options.padding - height * 0.1,
-            width * 0.2,
-            height * 0.1
-        ));
+        const buttonAnchor = new Rectangle(
+            this.modalBounds.x + width * (0.5 - BUTTON_WIDTH / 2),
+            this.modalBounds.y + height - this.options.padding - BUTTON_HEIGHT * height,
+            width * BUTTON_WIDTH,
+            height * BUTTON_HEIGHT,
+        );
+
+        if (this.options.showCancelButton) {
+            this.confirmButton.setBounds(new Rectangle(
+                buttonAnchor.x + this.options.padding / 2 + width * BUTTON_WIDTH / 2,
+                buttonAnchor.y,
+                buttonAnchor.width,
+                buttonAnchor.height
+            ));
+            this.cancelButton.setBounds(new Rectangle(
+                buttonAnchor.x - this.options.padding / 2 - width * BUTTON_WIDTH / 2,
+                buttonAnchor.y,
+                buttonAnchor.width,
+                buttonAnchor.height
+            ));
+            this.cancelButton.draw();
+            console.log("Drawing cancel button")
+        } else {
+            this.confirmButton.setBounds(buttonAnchor);
+        }
 
         this.confirmButton.draw();
     }
@@ -112,7 +134,7 @@ export default class Modal extends AbsoluteContainer {
         }
         
         const width = this.getBounds().width * this.options.modalWidthRatio;
-        const height = this.getBounds().height * this.options.modalWidthRatio;
+        const height = this.getBounds().height * this.options.modalHeightRatio;
 
         this.window
             .clear()
@@ -148,6 +170,6 @@ export default class Modal extends AbsoluteContainer {
             this.getBounds().height / 2,
         );
 
-        this.drawConfirmButton();
+        this.drawButtons();
     }
 }

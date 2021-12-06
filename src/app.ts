@@ -24,6 +24,7 @@ export default class App {
 
     root: HTMLElement;
     app: PIXI.Application;
+    gameTicker: PIXI.Ticker;
     
     screenBounds: PIXI.Rectangle;
     game: Game;
@@ -61,6 +62,7 @@ export default class App {
         this.app.renderer.backgroundColor = 0x564dff;
         this.app.stage.addChild(this.gameContainer);
 
+        this.gameTicker = new PIXI.Ticker();
     }
 
     resize() {
@@ -75,7 +77,14 @@ export default class App {
         }
     }
 
-    setupModal() {
+    onRestart() {
+        this.gameTicker.destroy();
+        this.gameTicker = new PIXI.Ticker();
+
+        this.setup();
+    }
+
+    setupGameOverModal() {
 
         const texture = this.app.loader.resources['skull'].texture;
         const skull = new PIXI.Sprite(texture);
@@ -88,8 +97,7 @@ export default class App {
         this.gameOverModal = new Modal(this.screenBounds, {
             padding: 40,
             title: "You Loose",
-            showCancelButton: false,
-            focusConfirm: true,
+            showCancelButton: true,
             cancelButtonText: "Retry",
             confirmButtonText: "Menu",
             darkenBackground: true,
@@ -138,7 +146,6 @@ export default class App {
                 { name: 'Bib bombs', stat: 'explosionRadius', delta: 3, rarity: 2 }
             ],
             powerupRarityStepFunction: (maxRarity: number, val: number) => {
-                console.log( Math.floor(maxRarity * val**2), val**2, val)
                 return Math.floor(maxRarity * val**2) + 1;
             },
             statusBoard: {
@@ -148,13 +155,11 @@ export default class App {
         };
 
         const resources = this.app.loader.resources;
-        const ticker = this.app.ticker;
 
-        this.game = new Game(this.gameContainer, ticker, resources, settings);
+        this.game = new Game(this.gameContainer, this.gameTicker, resources, settings);
         this.game.start();
-
                 
-        this.setupModal();
+        // this.setupModal();
     }
 
     async run() {

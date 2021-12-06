@@ -7,6 +7,7 @@ export type PlayerRow = {
     playerName: string;
     playerStats: StatsConfig;
     colour: number;
+    isAlive: boolean;
 };
 
 const PLAYER_ROW_HEIGHT_RATIO = 0.1;
@@ -28,9 +29,10 @@ export default class StatusBoard extends AbsoluteContainer {
     padding: number;
     playerRows: PlayerRow[];
 
-    constructor(bounds: PIXI.Rectangle, padding: number = 20) {
+    constructor(bounds: PIXI.Rectangle, resources: Resources, padding: number = 20) {
         super(bounds.x, bounds.y, bounds.width, bounds.height);
 
+        this.resources = resources;
         this.padding = padding
         this.sortableChildren = true;
         this.playerRows = [];
@@ -49,7 +51,11 @@ export default class StatusBoard extends AbsoluteContainer {
         const offset = Object.keys(this.playerRows[0].playerStats || {}).length * rowHeight;
 
         for (let [i, playerRow] of this.playerRows.entries()) {
-            this.renderPlayerTitle(playerRow, PLAYER_ROW_OFFSET + (offset + 2 * rowHeight) * i);
+            if (playerRow.isAlive) {
+                this.renderPlayerTitle(playerRow, PLAYER_ROW_OFFSET + (offset + 2 * rowHeight) * i);
+            } else {
+                this.renderPlayerTitleDead(playerRow, PLAYER_ROW_OFFSET + (offset + 2 * rowHeight) * i);
+            }
             this.renderPlayerPowerups(playerRow, PLAYER_ROW_OFFSET + (offset + 2 * rowHeight) * i + rowHeight);
         }
     }
@@ -102,6 +108,40 @@ export default class StatusBoard extends AbsoluteContainer {
             this.addChild(cell);
             this.addChild(statText);
         }
+    }
+
+    renderPlayerTitleDead(playerRow: PlayerRow, yOffset: number) {
+        
+        const rowHeight = this.bounds.width * PLAYER_ROW_HEIGHT_RATIO;
+
+        const texture = this.resources['skull'].texture;
+        const skull = new PIXI.Sprite(texture);
+        skull.texture.baseTexture.scaleMode = PIXI.SCALE_MODES.NEAREST;
+        skull.width = rowHeight;
+        skull.height = rowHeight;
+        skull.tint = 0x636363;
+        skull.position.set(this.padding, yOffset);
+
+        this.addChild(skull);
+
+        const playerTitle =  new PIXI.Text(playerRow.playerName, {
+            fontFamily: "oldschool",
+            fontStyle: "normal",
+            fontSize: `${rowHeight}px`,
+            fill: '#636363'
+        });
+        playerTitle.x = 1.5 * this.padding + rowHeight;
+        playerTitle.position.set(1.5 * this.padding + rowHeight, yOffset);
+        this.addChild(playerTitle);
+
+        const STRIKE_WIDTH = 3;
+        const strikeThrough = new PIXI.Graphics();
+        strikeThrough
+            .beginFill(0x636363)
+            .drawRect(playerTitle.x, playerTitle.y + rowHeight / 2 - STRIKE_WIDTH / 2, playerTitle.width, STRIKE_WIDTH)
+            .endFill();
+
+        this.addChild(strikeThrough);
     }
 
     renderPlayerTitle(playerRow: PlayerRow, yOffset: number) {

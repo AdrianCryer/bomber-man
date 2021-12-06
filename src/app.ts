@@ -1,14 +1,14 @@
 import * as PIXI from "pixi.js"
-import { SCALE_MODES } from "pixi.js";
+import { Rectangle, SCALE_MODES } from "pixi.js";
 import FontFaceObserver from "fontfaceobserver";
 import Game from "./game";
 import GameMap from "./game-map";
-import StatusBoard from "./graphics/statusboard";
 import { GameSettings } from "./types";
+import { AbsoluteContainer } from "./graphics/absolute-container";
+import Modal from "./graphics/modal";
 
 import basicMap from "../maps/basic.txt";
 import retroMap from "../maps/retro.txt";
-import { AbsoluteContainer } from "./graphics/absolute-container";
 
 
 const assets = {    
@@ -24,12 +24,10 @@ export default class App {
     root: HTMLElement;
     app: PIXI.Application;
     
+    screenBounds: PIXI.Rectangle;
     game: Game;
     gameContainer: AbsoluteContainer;
-    
-    StatusBoard: StatusBoard;
-
-    private StatusBoardRatio: number = 0.3;
+    gameOverModal: Modal;
 
     constructor(window: any, root: HTMLElement) {
         this.app = new PIXI.Application({
@@ -55,22 +53,43 @@ export default class App {
         }
 
         const { width, height } = this.app.screen;
+        this.screenBounds = new Rectangle(0, 0, width, height);
         this.gameContainer = new AbsoluteContainer(0, 0, width, height);
         this.gameContainer.sortableChildren = true;
 
         this.app.renderer.backgroundColor = 0x564dff;
         this.app.stage.addChild(this.gameContainer);
+
     }
 
     resize() {
         this.app.renderer.resize(window.innerWidth, window.innerHeight);
+        this.screenBounds = new Rectangle(0, 0, this.app.screen.width, this.app.screen.height);
 
         // Just don't set the scale of the container, instead, set the bounds
-        this.gameContainer.setBounds(new PIXI.Rectangle(0, 0, this.app.screen.width, this.app.screen.height));
+        this.gameContainer.setBounds(this.screenBounds);
 
         if (this.game) {
             this.game.resize();
         }
+    }
+
+    setupModal() {
+        this.gameOverModal = new Modal(this.screenBounds, {
+            padding: 20,
+            title: "You Loose",
+            showCloseButton: true,
+            showCancelButton: false,
+            focusConfirm: true,
+            confirmButtonText: "Back To Menu",
+            darkenBackground: true,
+            modalWidthRatio: 0.5,
+            modalHeightRatio: 0.5
+        });
+        this.gameOverModal.zIndex = 10;
+        this.app.stage.addChild(this.gameOverModal);
+        this.gameOverModal.show();
+        this.gameOverModal.draw();
     }
 
     async setup() {
@@ -119,7 +138,10 @@ export default class App {
         const ticker = this.app.ticker;
 
         this.game = new Game(this.gameContainer, ticker, resources, settings);
-        this.game.start()
+        this.game.start();
+
+                
+        this.setupModal();
     }
 
     async run() {

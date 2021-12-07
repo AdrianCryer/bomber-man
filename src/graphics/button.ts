@@ -21,8 +21,7 @@ export default class Button extends AbsoluteContainer {
     text: Text;
 
     constructor(options: ButtonOptions) {
-        let bounds = new Rectangle(0,0,0,0);
-        super(bounds.x, bounds.y, bounds.width, bounds.height);
+        super();
         this.options = options;
         this.frame = new Graphics();
         this.frame.buttonMode = true;
@@ -33,7 +32,6 @@ export default class Button extends AbsoluteContainer {
         .on('mouseout', () => this.onHoverRelease());
         
         this.addChild(this.frame);
-
         this.colour = this.options.backgroundColour;
     }
 

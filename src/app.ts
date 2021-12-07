@@ -56,7 +56,9 @@ export default class App {
 
         const { width, height } = this.app.screen;
         this.screenBounds = new Rectangle(0, 0, width, height);
-        this.gameContainer = new AbsoluteContainer(0, 0, width, height);
+        
+        this.gameContainer = new AbsoluteContainer();
+        this.gameContainer.setBounds(this.screenBounds);
         this.gameContainer.sortableChildren = true;
 
         this.app.renderer.backgroundColor = 0x564dff;

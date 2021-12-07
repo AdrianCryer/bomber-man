@@ -32,7 +32,8 @@ export default class Modal extends AbsoluteContainer {
     cancelButton?: Button;
 
     constructor(rectangle: PIXI.Rectangle, options: ModalOptions) {
-        super(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
+        super();
+        this.setBounds(rectangle)
         this.options = options;
         this.sortableChildren = true;
 

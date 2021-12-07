@@ -445,7 +445,7 @@ export default class Game {
         this.renderGrid(true);
         this.ticker.add(() => {
             let timeNow = (new Date()).getTime();
-            let timeDiff = timeNow - this.time;
+            let timeDiff = timeNow - this.time
 
             if (timeDiff < Math.round(1000 / this.settings.tickrate)) {
                 return;

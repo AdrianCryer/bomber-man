@@ -4,9 +4,8 @@ export class AbsoluteContainer extends Container {
     
     bounds: Rectangle;
 
-    constructor(x: number, y: number, width: number, height: number) {
+    constructor() {
         super();
-        this.setBounds(new Rectangle(x, y, width, height));        
     }
 
     setBounds(bounds: Rectangle) {
@@ -18,9 +17,16 @@ export class AbsoluteContainer extends Container {
     }
 
     static fromParent(container: AbsoluteContainer) {
-        const { x, y, width, height } = container.getBounds();
-        return new AbsoluteContainer(x, y, width, height);
+        const instance = new AbsoluteContainer();
+        instance.setBounds(container.getBounds().clone());
+        return instance;
     } 
+
+    static from(x: number, y: number, width: number, height: number) {
+        const instance = new AbsoluteContainer();
+        instance.setBounds(new Rectangle(x, y, width, height));
+        return instance;
+    }
     
     static horizontalSplit(container: AbsoluteContainer, splitRatio: number): [left: Rectangle, right: Rectangle] {
         const { x, y, width, height } = container.getBounds();

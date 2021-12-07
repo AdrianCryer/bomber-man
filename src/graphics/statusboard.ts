@@ -30,8 +30,8 @@ export default class StatusBoard extends AbsoluteContainer {
     playerRows: PlayerRow[];
 
     constructor(bounds: PIXI.Rectangle, resources: Resources, padding: number = 20) {
-        super(bounds.x, bounds.y, bounds.width, bounds.height);
-
+        super();
+        this.setBounds(bounds);
         this.resources = resources;
         this.padding = padding
         this.sortableChildren = true;

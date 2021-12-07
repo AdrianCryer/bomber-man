@@ -1,6 +1,7 @@
 import * as PIXI from "pixi.js";
 import Game from "../game";
-import Player, { Direction } from "../player";
+import Player from "../player";
+import { Direction } from "../types";
 
 export interface PlayerController {
     setup: (view: Game, thisPlayer: Player) => void;

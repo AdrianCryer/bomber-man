@@ -1,7 +1,41 @@
-import { CellType } from "./game-map";
+import GameMap, { CellType } from "./game-map";
 import Player from "./player";
-import { Direction, GameSettings, Position, PowerUpType, StatsConfig } from "./types";
+import { Direction, GameSettings, Position, PowerUpType, StatsConfig, StatType } from "./types";
 
+export type MatchSettings = {
+
+    // The map to play
+    map: GameMap;
+
+    // Number of bots in the game
+    bots: number;
+
+    // Bot difficulty
+    difficulty: 'easy' | 'medium' | 'hard';
+
+    // Tickrate to preform fixed updates (i.e., movement)
+    tickrate: number;
+
+    // Percentage of brick spawns
+    brickSpawnChance: number;
+    
+    // Chance that a powerup will spawn on breaking a brick
+    powerupSpawnChance: number;
+
+    // Permitted settings
+    statsSettings: {
+        [key in StatType]: { min: number, max: number }
+    };
+
+    // Settings of all of the starting players
+    detaultStats: StatsConfig;
+
+    // Types of powerups that can drop in the game.
+    powerups: PowerUpType[];
+
+    // Function to determine which tier of powerup to drop
+    powerupRarityStepFunction: (maxRarity: number, val: number) => number;
+};
 
 export type PlayerConfig = {
     position: Position;
@@ -50,9 +84,9 @@ export type GridCell = {
     players: Player[];
 };
 
-export default class Game {
+export default class Match {
 
-    settings: GameSettings;
+    settings: MatchSettings;
     grid: GridCell[][];
     players: Player[];
     bombs: Bomb[];
@@ -63,7 +97,7 @@ export default class Game {
     /** Number of elapsed ticks */
     time: number;
 
-    constructor(settings: GameSettings) {
+    constructor(settings: MatchSettings) {
         this.settings = settings;
         this.grid = [];
         this.players = [];

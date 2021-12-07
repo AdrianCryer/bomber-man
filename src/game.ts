@@ -1,10 +1,10 @@
 import * as PIXI from "pixi.js";
 import { Graphics, Sprite } from "pixi.js";
 import GameMap, { CellType } from "./game-map";
-import Player, { Bomb, Direction } from "./player";
-import { RandomAIInputController, UserInputController } from "./player-controller";
+import Player from "./player";
+import { RandomAIInputController, UserInputController } from "./controllers/player-controller";
 import StatusBoard, { PlayerRow } from "./graphics/statusboard";
-import { GameSettings, Position, StatType, Resources, PowerUp, GameRenderable } from "./types";
+import { GameSettings, Position, StatType, Resources, PowerUp, GameRenderable, Direction } from "./types";
 import { AbsoluteContainer } from "./graphics/absolute-container";
 
 type Explosion = {

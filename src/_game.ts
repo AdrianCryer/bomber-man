@@ -1,10 +1,12 @@
-import * as PIXI from "pixi.js";
-import { Graphics } from "pixi.js";
 import { CellType } from "./game-map";
-import Player, { Direction } from "./player";
-import { RandomAIInputController, UserInputController } from "./player-controller";
-import { GameSettings, Position, PowerUpType } from "./types";
+import Player from "./player";
+import { Direction, GameSettings, Position, PowerUpType, StatsConfig } from "./types";
 
+
+export type PlayerConfig = {
+    position: Position;
+    stats: StatsConfig;
+};
 
 export type Bomb = {
     owner: Player;
@@ -45,6 +47,7 @@ export type GridCell = {
     bombs: Bomb[];
     explosionsCells: ExplosionCell[];
     powerups: PowerUp[];
+    players: Player[];
 };
 
 export default class Game {
@@ -53,8 +56,12 @@ export default class Game {
     grid: GridCell[][];
     players: Player[];
     bombs: Bomb[];
+    powerups: PowerUp[];
     explosions: Explosion[];
     started: boolean;
+
+    /** Number of elapsed ticks */
+    time: number;
 
     constructor(settings: GameSettings) {
         this.settings = settings;
@@ -62,12 +69,13 @@ export default class Game {
         this.players = [];
         this.bombs = [];
         this.explosions = [];
+        this.time = 0;
 
         this.setup();
     }
 
     setup() {
-        
+
         // Set initial positions
         const startingPositions = this.settings.map.startingPositions;
 
@@ -89,7 +97,7 @@ export default class Game {
         for (let i = 0; i < height; i++) {
             for (let j = 0; j < width; j++) {
 
-                if (this.grid[i][j].type === CellType.OPEN && 
+                if (this.grid[i][j].type === CellType.OPEN &&
                     Math.random() <= this.settings.brickSpawnChance) {
                     this.grid[i][j] = this.createCell(CellType.BRICK);
                 }
@@ -98,11 +106,9 @@ export default class Game {
 
         // Add human player
         this.players.push(new Player(
-            0, 
-            new Graphics(),
-            new UserInputController(),
+            0,
             {
-                position: startingPositions[0],
+                initialPosition: startingPositions[0],
                 stats: Object.assign({}, this.settings.detaultStats)
             }
         ));
@@ -112,14 +118,17 @@ export default class Game {
             this.players.push(
                 new Player(
                     i + 1,
-                    new Graphics(),
-                    new RandomAIInputController(),
                     {
-                        position: startingPositions[i + 1],
+                        initialPosition: startingPositions[i + 1],
                         stats: Object.assign({}, this.settings.detaultStats)
                     }
                 )
             )
+        }
+
+        for (let player of this.players) {
+            player.isAlive = true;
+            this.getCell(player.position).players.push(player);
         }
     }
 
@@ -128,7 +137,8 @@ export default class Game {
             type,
             bombs: [],
             explosionsCells: [],
-            powerups: []
+            powerups: [],
+            players: []
         }
     }
 
@@ -147,8 +157,8 @@ export default class Game {
     }
 
     positionIsTraversable(position: Position): boolean {
-        return !this.positionIsBlocked(position) && 
-                this.getCell(position).bombs.length == 0;
+        return !this.positionIsBlocked(position) &&
+            this.getCell(position).bombs.length == 0;
     }
 
     getNextPosition(position: Position, direction: Direction, delta: number = 1): Position {
@@ -165,17 +175,34 @@ export default class Game {
         return { x, y };
     }
 
+    createBomb(player: Player, position: Bomb) {
+
+    }
+
     removeBomb(bomb: Bomb) {
         let i = this.bombs.indexOf(bomb);
-        if (i != - 1) 
+        if (i !== - 1)
             this.bombs.splice(i, 1);
         i = this.getCell(bomb.position).bombs.indexOf(bomb);
         if (i != -1)
             this.getCell(bomb.position).bombs.splice(i, 1);
     }
+    
+    createExplosion(source: Bomb, time: number) {
+        const cells = this.calculateExplosionCells(source);
+        const explosion = {
+            center: source.position,
+            radius: source.explosionRadius,
+            duration: source.explosionDuration,
+            timeCreated: time,
+            cells
+        } as Explosion;
 
-    removeExplosion(explosion: Explosion) {
-
+        this.explosions.push(explosion);
+        for (let cell of cells) {
+            this.getCell(cell.position).explosionsCells.push(cell);
+        }
+        this.handleExplosion(explosion);
     }
 
     calculateExplosionCells(source: Bomb): ExplosionCell[] {
@@ -206,8 +233,8 @@ export default class Game {
                 isCentre: false,
             };
 
-            let isStopping = (i === radius- 1);
-            if (i < radius- 1) {
+            let isStopping = (i === radius - 1);
+            if (i < radius - 1) {
                 const next = this.getNextPosition(position, direction);
                 if (!this.positionIsInBounds(next) || this.getCell(next).type === CellType.SOLID) {
                     isStopping = true;
@@ -232,21 +259,68 @@ export default class Game {
 
         return cells;
     }
+    
+    handleExplosion(explosion: Explosion) {
+        for (let explosionCell of explosion.cells) {
+            let pos = explosionCell.position;
+            let cell = this.getCell(pos);
+            if (cell.type === CellType.BRICK) {
+                
+                // Try spawn power up at center 
+                if (Math.random() < this.settings.powerupSpawnChance) {
+                    this.createPowerup(pos);
+                }
 
-    createExplosion(source: Bomb, time: number) {
-        const cells = this.calculateExplosionCells(source);
-        const explosion = {
-            center: source.position,
-            radius: source.explosionRadius,
-            duration: source.explosionDuration,
-            timeCreated: time,
-            cells
-        } as Explosion;
-
-        this.explosions.push(explosion);
-        for (let cell of cells) {
-            this.getCell(cell.position).explosionsCells.push(cell);
+                this.grid[pos.y][pos.x] = this.createCell(CellType.OPEN);
+            }
         }
+    }
+
+    removeExplosion(explosion: Explosion) {
+        let i = this.explosions.indexOf(explosion);
+        if (i !== - 1)
+            this.explosions.splice(i, 1);
+
+        for (let cell of explosion.cells) {
+            i = this.getCell(cell.position).explosionsCells.indexOf(cell);
+            if (i != -1) {
+                this.getCell(cell.position).explosionsCells.splice(i, 1);
+            }
+        }
+    }
+
+    createPowerup(position: Position) {
+        const maxRarity = Math.max(...this.settings.powerups.map(p => p.rarity));
+        const powerupTier = this.settings.powerupRarityStepFunction(maxRarity, Math.random());
+        const allPowerups = this.settings.powerups.filter(p => p.rarity === powerupTier);
+        console.log("SPAWNING TIER", powerupTier, maxRarity);
+
+        const powerup = {
+            position,
+            type: allPowerups[Math.floor(Math.random() * allPowerups.length)],
+        };
+        this.powerups.push(powerup);
+        this.getCell(position).powerups.push(powerup);
+    }
+
+    removePowerup(powerup: PowerUp) {
+        const currentCell = this.getCell(powerup.position);
+        let i = this.powerups.indexOf(powerup);
+        if (i !== -1) {
+            this.powerups.splice(i, 1);
+        }
+        i = currentCell.powerups.indexOf(powerup);
+        currentCell.powerups.splice(i, 1);
+    }
+
+    updatePlayerPosition(player: Player, nextPos: Position) {
+        const currentCell = this.getCell(player.position);
+        let i = currentCell.players.indexOf(player);
+        if (i != -1) {
+            currentCell.players.splice(i, 1);
+        }
+        player.position = nextPos;
+        this.getCell(nextPos).players.push(player);
     }
 
     start() {
@@ -261,20 +335,20 @@ export default class Game {
             const shouldExplode = (time >= bomb.timePlaced + bomb.timer);
             if (bomb.isSliding) {
                 const delta = bomb.slidingSpeed / this.settings.tickrate;
-                
+
                 bomb.position = this.getNextPosition(bomb.position, slidingDirection, delta);
-                const closest = { 
-                    x: Math.round(bomb.position.x), 
-                    y: Math.round(bomb.position.y) 
+                const closest = {
+                    x: Math.round(bomb.position.x),
+                    y: Math.round(bomb.position.y)
                 };
                 const next = this.getNextPosition(closest, slidingDirection);
 
-                if (shouldExplode || 
+                if (shouldExplode ||
                     (closest.x !== bomb.position.x || closest.y !== bomb.position.y) &&
                     !this.positionIsTraversable(next)) {
-                        
+
                     // Force to next cell
-                    if (Math.abs(bomb.position.x - closest.x) <= delta && 
+                    if (Math.abs(bomb.position.x - closest.x) <= delta &&
                         Math.abs(bomb.position.y - closest.y) <= delta) {
 
                         bomb.isSliding = false;
@@ -290,36 +364,113 @@ export default class Game {
         }
     }
 
-    updatePlayerMovement(time: number) {
+    updatePlayerMovement(player: Player) {
+        if (!player.isAlive) {
+            return;
+        }
 
+        const { inTransition, wantsToMove, movingDirection, position } = player;
+        if (!inTransition && wantsToMove) {
+
+            const nextPos = this.getNextPosition(position, movingDirection);
+            if (!this.positionIsBlocked(nextPos)) {
+
+                let canMove = true;
+                const bombs = this.getCell(nextPos).bombs;
+
+                // Position contains bomb: can only move if can slide bomb
+                if (bombs.length > 0) {
+                    const bombNextPos = this.getNextPosition(nextPos, movingDirection);
+                    canMove = this.positionIsTraversable(bombNextPos);
+
+                    if (canMove) {
+                        for (let bomb of bombs) {
+                            bomb.isSliding = true;
+                            bomb.slidingDirection = movingDirection;
+                        }
+                    }
+                }
+
+                if (canMove) {
+                    player.moveTransitionPercent = 0;
+                    player.moveTransitionDirection = movingDirection;
+                    player.inTransition = true;
+                }
+            }
+        }
+
+        // Interpolate if in transition
+        if (player.inTransition) {
+
+            player.moveTransitionPercent += player.stats.speed / this.settings.tickrate;
+            player.moveTransitionPercent = Math.min(player.moveTransitionPercent, 1);
+
+            if (player.moveTransitionDirection === Direction.UP) {
+                player.position.y = player.cellPosition.y - player.moveTransitionPercent;
+            } else if (player.moveTransitionDirection === Direction.DOWN) {
+                player.position.y = player.cellPosition.y + player.moveTransitionPercent;
+            } else if (player.moveTransitionDirection === Direction.LEFT) {
+                player.position.x = player.cellPosition.x - player.moveTransitionPercent;
+            } else if (player.moveTransitionDirection === Direction.RIGHT) {
+                player.position.x = player.cellPosition.x + player.moveTransitionPercent;
+            }
+
+            if (player.moveTransitionPercent === 1) {
+                const nextPos = {
+                    x: Math.round(player.position.x),
+                    y: Math.round(player.position.y)
+                };
+                player.inTransition = false;
+                player.cellPosition = nextPos;
+            }
+        }
     }
 
     updateExplosions(time: number) {
         for (let [i, explosion] of this.explosions.entries()) {
             if (time >= explosion.timeCreated + explosion.duration * 1000) {
+                this.removeExplosion(explosion);
+            }
+        }
+    }
 
-                this.explosions.splice(i, 1);
-                for (let cell of explosion.cells) {
-                    let i = this.getCell(cell.position).explosionsCells.indexOf(cell);
-                    if (i != -1) {
-                        this.getCell(cell.position).explosionsCells.splice(i, 1);
+    updateCellState(time: number) {
+        const { width, height } = this.settings.map.props;
+        for (let i = 0; i < height; i++) {
+            for (let j = 0; j < width; j++) {
+
+                const cell = this.grid[i][j];
+
+                // Check for explosion death
+                if (cell.explosionsCells.length !== 0) {
+                    for (let player of cell.players) {
+                        player.isAlive = false;
+                    }
+                }
+
+                // Apply powerups
+                if (cell.players.length !== 0) {
+                    let player = cell.players[0];
+                    for (let powerup of cell.powerups) {
+                        player.stats[powerup.type.stat] += powerup.type.delta;
+                        this.removePowerup(powerup);
                     }
                 }
             }
         }
     }
 
-    updateCellState(time: number) {
-
-    }
-
     // Fixed update
     update(time: number) {
-
         this.updateBombs(time);
+        this.updateExplosions(time);
 
         for (let player of this.players) {
-
+            this.updatePlayerMovement(player)
         }
+
+        this.updateCellState(time);
+
+        this.time += 1;
     }
 }

@@ -4,6 +4,13 @@ import GameMap from "./game-map";
 export type Resources = PIXI.utils.Dict<PIXI.LoaderResource>;
 export type GameRenderable<T, S extends PIXI.Container> = T & { graphic?: S, addedToCanvas: boolean };
 
+export enum Direction {
+    UP = 0,
+    LEFT = 1,
+    DOWN = 2,
+    RIGHT = 3,
+}
+
 export type Position = { x: number; y: number };
 
 export type Size = { width: number; height: number };

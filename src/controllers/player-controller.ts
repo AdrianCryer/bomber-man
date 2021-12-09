@@ -27,7 +27,7 @@ export class UserInputController implements PlayerController {
             } else if (e.key === 'ArrowDown') {
                 thisPlayer.setMoving(Direction.DOWN);
             } else if (e.code === 'Space') {
-                thisPlayer.placeBomb();
+                // thisPlayer.placeBomb();
             }
         });
 

@@ -1,6 +1,6 @@
 import GameMap, { CellType } from "./game-map";
-import Player from "./player";
-import { Direction, GameSettings, Position, PowerUpType, StatsConfig, StatType } from "./types";
+import Player from "../player";
+import { Direction, GameSettings, Position, PowerUpType, StatsConfig, StatType } from "../types";
 
 export type MatchSettings = {
 
@@ -92,7 +92,6 @@ export default class Match {
     bombs: Bomb[];
     powerups: PowerUp[];
     explosions: Explosion[];
-    started: boolean;
 
     /** Number of elapsed ticks */
     time: number;
@@ -357,10 +356,6 @@ export default class Match {
         this.getCell(nextPos).players.push(player);
     }
 
-    start() {
-        this.started = true;
-    }
-
     updateBombs(time: number) {
         for (let [i, bomb] of this.bombs.entries()) {
 
@@ -495,7 +490,7 @@ export default class Match {
     }
 
     // Fixed update
-    update(time: number) {
+    mutate(time: number) {
         this.updateBombs(time);
         this.updateExplosions(time);
 

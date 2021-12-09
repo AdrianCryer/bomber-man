@@ -1,6 +1,6 @@
 import * as PIXI from "pixi.js";
 import { Graphics, Sprite } from "pixi.js";
-import GameMap, { CellType } from "./game-map";
+import GameMap, { CellType } from "./model/game-map";
 import Player from "./player";
 import { RandomAIInputController, UserInputController } from "./controllers/player-controller";
 import StatusBoard, { PlayerRow } from "./graphics/statusboard";

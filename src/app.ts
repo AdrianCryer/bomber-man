@@ -2,7 +2,7 @@ import * as PIXI from "pixi.js"
 import { Rectangle, SCALE_MODES } from "pixi.js";
 import FontFaceObserver from "fontfaceobserver";
 import Game from "./game";
-import GameMap from "./game-map";
+import GameMap from "./model/game-map";
 import { GameSettings } from "./types";
 import { AbsoluteContainer } from "./graphics/absolute-container";
 import Modal from "./graphics/modal";
@@ -145,7 +145,7 @@ export default class App {
             powerups:  [
                 { name: 'Speed Up', stat: 'speed', delta: 1, rarity: 1 },
                 { name: 'Bomb range up', stat: 'explosionRadius', delta: 1, rarity: 1 },
-                { name: 'Bib bombs', stat: 'explosionRadius', delta: 3, rarity: 2 }
+                { name: 'Big bombs', stat: 'explosionRadius', delta: 3, rarity: 2 }
             ],
             powerupRarityStepFunction: (maxRarity: number, val: number) => {
                 return Math.floor(maxRarity * val**2) + 1;

@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import GameMap from "./game-map";
+import GameMap from "./model/game-map";
 
 export type Resources = PIXI.utils.Dict<PIXI.LoaderResource>;
 export type GameRenderable<T, S extends PIXI.Container> = T & { graphic?: S, addedToCanvas: boolean };

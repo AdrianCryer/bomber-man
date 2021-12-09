@@ -1,5 +1,5 @@
 import { EventEmitter } from "stream";
-import Game from "./model/_game";
+import Game from "./model/game";
 import GameView from "./graphics/game-view";
 import UserController from "./controllers/user-controller";
 
@@ -18,15 +18,15 @@ export default class MVCBridge extends EventEmitter {
     }
 
     setup() {
-        
+
         // server
         this.on("start_match", () => {
             // this.model.
         });
 
         // client
-        this.controller.setup(this);
-        this.view.setup(this);
+        // this.controller.setup(this);
+        // this.view.setup(this);
     }
 
     mutate() {

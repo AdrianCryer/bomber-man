@@ -1,13 +1,9 @@
-import { Direction } from "readline";
-import { EventEmitter } from "stream";
 import GameMap from "./game-map";
 import Match, { MatchSettings } from "./match";
 
 export type GameSettings = {};
 
 const LEVELS = {};
-
-// export type GameFragment = Exclude<Game, 'eventEmitter' | 'maps'>;
 
 export default class Game {
 
@@ -18,11 +14,17 @@ export default class Game {
 
     constructor(settings: GameSettings) {
         this.settings = settings;
+        this.inMatch = false;
+        this.maps = {};
     }
 
     startMatch(matchSettings: MatchSettings) {
         this.inMatch = true;
         this.currentMatch = new Match(matchSettings);
+    }
+
+    addMap(name: string, map: GameMap) {
+        this.maps[name] = map;
     }
 
     mutate() {

@@ -1,21 +1,26 @@
 import { EventEmitter } from "stream";
-import { Direction } from "../types";
+import { Direction } from "../model/types";
 
 
 export default class UserController {
+    socket: EventEmitter;
 
-    public setup(bridge: EventEmitter) {
+    constructor(socket: EventEmitter) {
+        this.socket = socket;
+    }
+
+    public setup() {
         document.addEventListener('keydown', e => {
             if (e.key === 'ArrowRight') {
-                bridge.emit("", { direction: Direction.RIGHT });
+                this.socket.emit("", { direction: Direction.RIGHT });
             } else if (e.key === 'ArrowLeft') {
-                bridge.emit("set_moving", { direction: Direction.LEFT });
+                this.socket.emit("set_moving", { direction: Direction.LEFT });
             } else if (e.key === 'ArrowUp') {
-                bridge.emit("set_moving", { direction: Direction.UP });
+                this.socket.emit("set_moving", { direction: Direction.UP });
             } else if (e.key === 'ArrowDown') {
-                bridge.emit("set_moving", { direction: Direction.DOWN });
+                this.socket.emit("set_moving", { direction: Direction.DOWN });
             } else if (e.code === 'Space') {
-                bridge.emit("place_bomb");
+                this.socket.emit("place_bomb");
             }
         });
 

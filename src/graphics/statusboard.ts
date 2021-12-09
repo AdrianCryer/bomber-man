@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { Position, StatsConfig, Resources, Size, StatType } from "../types";
+import { Position, StatsConfig, Resources, Size, StatType } from "../model/types";
 import { AbsoluteContainer } from "./absolute-container";
 
 export type PlayerRow = {

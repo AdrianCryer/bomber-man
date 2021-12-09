@@ -1,8 +1,9 @@
 import * as PIXI from "pixi.js";
 import Match, { Bomb, ExplosionCell, PowerUp } from "../model/match";
 import Player from "../player";
-import { GameRenderable } from "../types";
 import { AbsoluteContainer } from "./absolute-container";
+
+export type GameRenderable<T, S extends PIXI.Container> = T & { graphic?: S, addedToCanvas: boolean };
 
 export default class MatchGrid extends AbsoluteContainer {
 

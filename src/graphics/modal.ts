@@ -40,8 +40,10 @@ export default class Modal extends AbsoluteContainer {
         this.window = new Graphics();
         this.addChild(this.window);
 
-        this.icon = this.options.icon;
-        this.addChild(this.icon);
+        if (this.options.icon) {
+            this.icon = this.options.icon;
+            this.addChild(this.icon);
+        }
 
         this.confirmButton = new Button({
             text: options.confirmButtonText,
@@ -97,7 +99,7 @@ export default class Modal extends AbsoluteContainer {
         const width = this.getBounds().width * this.options.modalWidthRatio;
         const height = this.getBounds().height * this.options.modalHeightRatio;
         const BUTTON_WIDTH = 0.2;
-        const BUTTON_HEIGHT = 0.1;
+        const BUTTON_HEIGHT = 0.2;
 
         const buttonAnchor = new Rectangle(
             this.modalBounds.x + width * (0.5 - BUTTON_WIDTH / 2),
@@ -130,10 +132,6 @@ export default class Modal extends AbsoluteContainer {
 
     draw() {
 
-        if (this.hidden) {
-            return;
-        }
-        
         const width = this.getBounds().width * this.options.modalWidthRatio;
         const height = this.getBounds().height * this.options.modalHeightRatio;
 
@@ -166,10 +164,12 @@ export default class Modal extends AbsoluteContainer {
         this.title.anchor.set(0.5, 0);
 
         // Icon
-        this.icon.position.set(
-            this.getBounds().width / 2,
-            this.getBounds().height / 2,
-        );
+        if (this.options.icon) {
+            this.icon.position.set(
+                this.getBounds().width / 2,
+                this.getBounds().height / 2,
+            );
+        }
 
         this.drawButtons();
     }

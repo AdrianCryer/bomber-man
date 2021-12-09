@@ -1,6 +1,6 @@
 import GameMap, { CellType } from "./game-map";
 import Player from "../player";
-import { Direction, GameSettings, Position, PowerUpType, StatsConfig, StatType } from "../types";
+import { Direction, Position, PowerUpType, StatsConfig, StatType } from "./types";
 
 export type MatchSettings = {
 
@@ -18,7 +18,7 @@ export type MatchSettings = {
 
     // Percentage of brick spawns
     brickSpawnChance: number;
-    
+
     // Chance that a powerup will spawn on breaking a brick
     powerupSpawnChance: number;
 
@@ -220,7 +220,7 @@ export default class Match {
         if (i != -1)
             this.getCell(bomb.position).bombs.splice(i, 1);
     }
-    
+
     createExplosion(source: Bomb, time: number) {
         const cells = this.calculateExplosionCells(source);
         const explosion = {
@@ -292,13 +292,13 @@ export default class Match {
 
         return cells;
     }
-    
+
     handleExplosion(explosion: Explosion) {
         for (let explosionCell of explosion.cells) {
             let pos = explosionCell.position;
             let cell = this.getCell(pos);
             if (cell.type === CellType.BRICK) {
-                
+
                 // Try spawn power up at center 
                 if (Math.random() < this.settings.powerupSpawnChance) {
                     this.createPowerup(pos);

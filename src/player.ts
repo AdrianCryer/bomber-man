@@ -1,4 +1,4 @@
-import { Direction, Position, StatsConfig } from "./types";
+import { Direction, Position, StatsConfig } from "./model/types";
 
 type PlayerConfig = {
     initialPosition: Position;

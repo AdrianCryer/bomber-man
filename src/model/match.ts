@@ -1,6 +1,6 @@
 import shortUUID from "short-uuid";
 import GameMap, { CellType } from "./game-map";
-import Player from "../player";
+import Player from "./player";
 import { Direction, Position, PowerUpType, StatsConfig, StatType } from "./types";
 
 export type MatchSettings = {
@@ -58,11 +58,13 @@ export type Bomb = {
 };
 
 export type PowerUp = {
+    id: string;
     position: Position;
     type: PowerUpType;
 };
 
 export type ExplosionCell = {
+    id: string;
     direction: Direction;
     position: Position;
     intensity: number;
@@ -84,7 +86,6 @@ export type GridCell = {
     bombs: Bomb[];
     explosionsCells: ExplosionCell[];
     powerups: PowerUp[];
-    players: Player[];
 };
 
 export default class Match {
@@ -173,7 +174,6 @@ export default class Match {
 
         for (let player of this.players) {
             player.isAlive = true;
-            this.getCell(player.position).players.push(player);
         }
     }
 
@@ -183,8 +183,7 @@ export default class Match {
             type,
             bombs: [],
             explosionsCells: [],
-            powerups: [],
-            players: []
+            powerups: []
         }
     }
 
@@ -256,6 +255,7 @@ export default class Match {
         let stopped = Array(4).fill(false).slice();
 
         let cells: ExplosionCell[] = [{
+            id: shortUUID.generate(),
             intensity: source.power,
             position: Object.assign({}, source.position),
             isEnd: false,
@@ -270,6 +270,7 @@ export default class Match {
             }
 
             const cell = {
+                id: shortUUID.generate(),
                 direction,
                 position: position,
                 intensity: source.power,
@@ -306,6 +307,7 @@ export default class Match {
     handleExplosion(explosion: Explosion) {
         for (let explosionCell of explosion.cells) {
             let pos = explosionCell.position;
+
             let cell = this.getCell(pos);
             if (cell.type === CellType.BRICK) {
 
@@ -340,6 +342,7 @@ export default class Match {
         console.log("SPAWNING TIER", powerupTier, maxRarity);
 
         const powerup = {
+            id: shortUUID.generate(),
             position,
             type: allPowerups[Math.floor(Math.random() * allPowerups.length)],
         };
@@ -372,7 +375,7 @@ export default class Match {
         this.bombs.push({
             id: shortUUID.generate(),
             owner: player,
-            position: player.cellPosition,
+            position: player.getNearestPosition(),
             explosionDuration: player.stats['explosionDuration'],
             explosionRadius: player.stats['explosionRadius'],
             timer: player.stats['bombTimer'],
@@ -381,16 +384,6 @@ export default class Match {
             slidingSpeed: 5,
             timePlaced: this.time
         });
-    }
-
-    updatePlayerPosition(player: Player, nextPos: Position) {
-        const currentCell = this.getCell(player.position);
-        let i = currentCell.players.indexOf(player);
-        if (i != -1) {
-            currentCell.players.splice(i, 1);
-        }
-        player.position = nextPos;
-        this.getCell(nextPos).players.push(player);
     }
 
     updateBombs(time: number) {
@@ -468,26 +461,14 @@ export default class Match {
         // Interpolate if in transition
         if (player.inTransition) {
 
-            player.moveTransitionPercent += player.stats.speed / this.settings.tickrate;
+            const delta = player.stats.speed / this.settings.tickrate;
+            player.moveTransitionPercent += delta;
             player.moveTransitionPercent = Math.min(player.moveTransitionPercent, 1);
-
-            if (player.moveTransitionDirection === Direction.UP) {
-                player.position.y = player.cellPosition.y - player.moveTransitionPercent;
-            } else if (player.moveTransitionDirection === Direction.DOWN) {
-                player.position.y = player.cellPosition.y + player.moveTransitionPercent;
-            } else if (player.moveTransitionDirection === Direction.LEFT) {
-                player.position.x = player.cellPosition.x - player.moveTransitionPercent;
-            } else if (player.moveTransitionDirection === Direction.RIGHT) {
-                player.position.x = player.cellPosition.x + player.moveTransitionPercent;
-            }
+            player.position = this.getNextPosition(player.position, player.moveTransitionDirection, delta);
 
             if (player.moveTransitionPercent === 1) {
-                const nextPos = {
-                    x: Math.round(player.position.x),
-                    y: Math.round(player.position.y)
-                };
                 player.inTransition = false;
-                player.cellPosition = nextPos;
+                player.position = player.getNearestPosition();
             }
         }
     }
@@ -502,24 +483,23 @@ export default class Match {
 
     updateCellState(time: number) {
         const { width, height } = this.settings.map.props;
-        for (let i = 0; i < height; i++) {
-            for (let j = 0; j < width; j++) {
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
 
-                const cell = this.grid[i][j];
+                const cell = this.grid[y][x];
+                const pos = { x, y };
 
-                // Check for explosion death
-                if (cell.explosionsCells.length !== 0) {
-                    for (let player of cell.players) {
-                        player.isAlive = false;
-                    }
-                }
-
-                // Apply powerups
-                if (cell.players.length !== 0) {
-                    let player = cell.players[0];
-                    for (let powerup of cell.powerups) {
-                        player.stats[powerup.type.stat] += powerup.type.delta;
-                        this.removePowerup(powerup);
+                for (let player of this.players) {
+                    if (positionEquals(player.getNearestPosition(), pos)) {
+                        // Check for explosion death
+                        if (cell.explosionsCells.length !== 0) {
+                            player.isAlive = false;
+                        }
+                        for (let powerup of cell.powerups) {
+                            console.log(powerup);
+                            player.stats[powerup.type.stat] += powerup.type.delta;
+                            this.removePowerup(powerup);
+                        }
                     }
                 }
             }
@@ -538,4 +518,8 @@ export default class Match {
 
         this.updateCellState(time);
     }
+}
+
+function positionEquals(a: Position, b: Position) {
+    return a.x === b.x && a.y === b.y;
 }

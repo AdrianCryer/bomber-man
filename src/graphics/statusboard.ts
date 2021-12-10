@@ -1,6 +1,7 @@
 import * as PIXI from "pixi.js";
-import { Position, StatsConfig, Resources, Size, StatType } from "../model/types";
+import { Position, StatsConfig, Size, StatType } from "../model/types";
 import { AbsoluteContainer } from "./absolute-container";
+import { Resources } from "./match-grid";
 
 export type PlayerRow = {
     position: number;

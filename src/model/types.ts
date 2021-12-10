@@ -1,7 +1,5 @@
 import * as PIXI from "pixi.js";
 
-export type Resources = PIXI.utils.Dict<PIXI.LoaderResource>;
-
 export enum Direction {
     UP = 0,
     LEFT = 1,

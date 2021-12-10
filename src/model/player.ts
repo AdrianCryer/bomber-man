@@ -1,4 +1,4 @@
-import { Direction, Position, StatsConfig } from "./model/types";
+import { Direction, Position, StatsConfig } from "./types";
 
 type PlayerConfig = {
     initialPosition: Position;
@@ -7,17 +7,13 @@ type PlayerConfig = {
 
 export default class Player {
     id: string;
+    position: Position;
     movingDirection: Direction;
     wantsToMove: boolean;
     inTransition: boolean;
     moveTransitionPercent: number;
     moveTransitionDirection: Direction;
-
     bombCount: number;
-
-    position: Position;
-    cellPosition: Position;
-
     stats: StatsConfig;
     isAlive: boolean;
 
@@ -26,10 +22,16 @@ export default class Player {
         this.wantsToMove = false;
         this.inTransition = false;
         this.moveTransitionPercent = 0;
-        this.cellPosition = Object.assign({}, initialPosition);
         this.position = Object.assign({}, initialPosition);
         this.stats = stats;
         this.bombCount = stats.bombCount;
+    }
+
+    getNearestPosition() {
+        return {
+            x: Math.round(this.position.x),
+            y: Math.round(this.position.y),
+        }
     }
 
     setMoving(direction: Direction) {

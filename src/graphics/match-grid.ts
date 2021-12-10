@@ -1,11 +1,11 @@
 import * as PIXI from "pixi.js";
 import { CellType } from "../model/game-map";
-import Match, { Bomb, ExplosionCell, GridCell, PowerUp } from "../model/match";
-import { Resources } from "../model/types";
-import Player from "../player";
+import Match, { Bomb, Explosion, ExplosionCell, GridCell, PowerUp } from "../model/match";
+import Player from "../model/player";
 import { AbsoluteContainer } from "./absolute-container";
 
 export type GameRenderable<T, S extends PIXI.Container> = T & { graphic?: S, addedToCanvas: boolean };
+export type Resources = PIXI.utils.Dict<PIXI.LoaderResource>;
 
 enum LAYERING {
     GROUND = 0,
@@ -78,21 +78,24 @@ export default class MatchGrid extends AbsoluteContainer {
         for (let bomb of match.bombs) {
 
             const id = bomb.id;
+            let graphic;
             if (!(id in this.graphics)) {
                 const sheet = this.resources['bomb'].spritesheet;
-                const graphic = new PIXI.AnimatedSprite(sheet.animations['exploding']);
+                graphic = new PIXI.AnimatedSprite(sheet.animations['exploding']);
 
                 graphic.animationSpeed = 0.3; 
                 graphic.play();
                 graphic.zIndex = LAYERING.ITEM;
-                graphic.width = this.cellWidth;
-                graphic.height = this.cellWidth;
-                graphic.position.x = bomb.position.x * this.cellWidth;
-                graphic.position.y = bomb.position.y * this.cellWidth;
-
                 this.graphics[id] = graphic;
                 this.addChild(graphic);
+            } else {
+                graphic = this.graphics[id];
             }
+            graphic.width = this.cellWidth;
+            graphic.height = this.cellWidth;
+            graphic.position.x = bomb.position.x * this.cellWidth;
+            graphic.position.y = bomb.position.y * this.cellWidth;
+
             graphics.delete(id);
         }
 
@@ -133,8 +136,35 @@ export default class MatchGrid extends AbsoluteContainer {
         }
 
         // Handle new powerups
+        for (let powerup of match.powerups) {
+            const id = powerup.id;
+            let graphic = (this.graphics[id] || new PIXI.Graphics()) as PIXI.Graphics;
+            if (!(id in this.graphics)) {
+                graphic = new PIXI.Graphics();
+                graphic.zIndex = LAYERING.ITEM;
+
+                this.graphics[id] = graphic;
+                this.addChild(graphic);
+            }
+            graphic.clear();
+            graphic
+                .beginFill(0x006ee6)
+                .lineStyle({ width: 1, color: 0x26 })
+                .drawRoundedRect(
+                    (0.25 + powerup.position.x) * this.cellWidth, 
+                    (0.25 + powerup.position.y) * this.cellWidth, 
+                    this.cellWidth / 2,
+                    this.cellWidth / 2,
+                    5
+                )
+                .endFill();
+            graphics.delete(id);
+        }
 
         // Handle new explosions
+        for (let explosion of match.explosions) {
+            this.drawExplosion(explosion, graphics);
+        }
 
         // Remove things that are no longer in the game.
         for (let id of graphics) {
@@ -142,6 +172,43 @@ export default class MatchGrid extends AbsoluteContainer {
         }
 
         this.drawPlayers(match);
+    }
+
+    drawExplosion(explosion: Explosion, check: Set<string>) {
+        for (let cell of explosion.cells) {
+
+            const id = cell.id;
+            let graphic = (this.graphics[id] || null) as PIXI.Sprite;
+            if (!(id in this.graphics)) {
+                const sheet = this.resources['explosion'].spritesheet;
+                let code = 'base';
+                if (cell.isCentre) {
+                    code = 'centre';
+                } else if (cell.isEnd) {
+                    code = 'end';
+                }
+
+                const texture = sheet.textures[`explosion-${code}-${cell.intensity}`];
+                graphic = new PIXI.Sprite(texture);
+                graphic.zIndex = LAYERING.TOP;
+                            
+                const angle = (cell.direction + 1) * 90 % 360;
+                graphic.angle = angle;
+                
+                this.graphics[id] = graphic;
+                this.addChild(graphic);
+            }
+
+            const x = (0.5 + cell.position.x) * this.cellWidth;
+            const y = (0.5 + cell.position.y) * this.cellWidth;
+            graphic.position.set(x, y);
+
+            const texture = graphic.texture;
+            graphic.pivot.set(texture.width / 2, texture.height / 2);
+
+            graphic.scale.set(this.cellWidth / texture.width, this.cellWidth / texture.height)
+            check.delete(id);
+        }
     }
 
     drawPlayers(match: Match) {
@@ -164,10 +231,6 @@ export default class MatchGrid extends AbsoluteContainer {
                     .endFill();
             }
         }
-    }
-
-    drawBombs() {
-        
     }
 
     calculateGridCellSize(match: Match) { 

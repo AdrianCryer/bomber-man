@@ -4,11 +4,10 @@ import GameMap from "./model/game-map";
 import GameView from "./graphics/game-view";
 import EventEmitter from "events";
 import UserController from "./controllers/user-controller";
-import MVCBridge from "./bridge";
-import { Resources } from "./model/types";
 import Match from "./model/match";
 import shortUUID from "short-uuid";
 import { Direction } from "readline";
+import { Resources } from "./graphics/match-grid";
 
 /**
  * APP: Combines the Model, View and Controllers (MVC). 

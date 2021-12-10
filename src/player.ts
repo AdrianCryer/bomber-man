@@ -6,7 +6,7 @@ type PlayerConfig = {
 };
 
 export default class Player {
-    id: number;
+    id: string;
     movingDirection: Direction;
     wantsToMove: boolean;
     inTransition: boolean;
@@ -21,7 +21,7 @@ export default class Player {
     stats: StatsConfig;
     isAlive: boolean;
 
-    constructor(id: number, { initialPosition, stats }: PlayerConfig) {
+    constructor(id: string, { initialPosition, stats }: PlayerConfig) {
         this.id = id;
         this.wantsToMove = false;
         this.inTransition = false;

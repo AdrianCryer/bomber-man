@@ -37,19 +37,21 @@ const DEFAULT_MATCH_SETTINGS: Omit<MatchSettings, 'map'> = {
 export default class Game {
 
     settings: GameSettings;
+    playerIds: string[];
     inMatch: boolean;
     currentMatch: Match;
     maps: Record<string, GameMap>;
 
-    constructor(settings: GameSettings) {
+    constructor(settings: GameSettings, playerIds: string[]) {
         this.settings = settings;
+        this.playerIds = playerIds;
         this.inMatch = false;
         this.maps = {};
     }
 
     startMatch(matchSettings: MatchSettings) {
         this.inMatch = true;
-        this.currentMatch = new Match(matchSettings);
+        this.currentMatch = new Match(matchSettings, this.playerIds);
     }
 
     startDefaultMatch() {
@@ -63,9 +65,10 @@ export default class Game {
         this.maps[name] = map;
     }
 
-    mutate() {
+    mutate(time: number) {
         if (!this.inMatch) {
             return;
         }
+        this.currentMatch.mutate(time)
     }
 }

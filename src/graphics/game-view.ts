@@ -76,13 +76,13 @@ export default class GameView {
         this.game = game;
     }
 
-    startMatch(match: Match) {
-        this.app.stage.removeChild(this.menuModal);
-        this.grid = new MatchGrid(match, this.app.loader.resources);
-    }
-
     updateMatch(match: Match) {
-        this.game.currentMatch = match;
+        if (!this.grid) {
+            this.menuModal.visible = false;
+            this.grid = new MatchGrid(this.app.loader.resources);
+            this.grid.setBounds(this.viewBounds);
+            this.app.stage.addChild(this.grid);
+        }
         this.grid.mutate(match);
     }
 
@@ -99,7 +99,6 @@ export default class GameView {
     }
 
     setupMenuModal() {
-        console.log(this.viewBounds);
         this.menuModal = new Modal(this.viewBounds, {
             padding: 40,
             title: "Bomberman",
@@ -127,6 +126,9 @@ export default class GameView {
         for (let [name, path] of Object.entries(ASSETS)) {
             this.app.loader.add(name, path);
         }
+        await new Promise((resolve, reject) => {
+            this.app.loader.load((loader, resources) => resolve(resources))
+        });
 
         const font = new FontFaceObserver("oldschool");
         await font.load();
@@ -136,8 +138,7 @@ export default class GameView {
         if (this.isLoading) {
             this.app.renderer.backgroundColor = 0x564dff;
         } else if (this.game.inMatch) {
-            this.menuModal.hidden = true;
-            this.grid.draw();
+            // this.grid.draw();
         }
     }
 }

@@ -1,4 +1,5 @@
 import * as PIXI from "pixi.js";
+import { CellType } from "../model/game-map";
 import Match, { Bomb, ExplosionCell, GridCell, PowerUp } from "../model/match";
 import { Resources } from "../model/types";
 import Player from "../player";
@@ -7,9 +8,9 @@ import { AbsoluteContainer } from "./absolute-container";
 export type GameRenderable<T, S extends PIXI.Container> = T & { graphic?: S, addedToCanvas: boolean };
 
 enum LAYERING {
-    GROUND = -1,
-    ITEM = 0,
-    ACTOR = 1,
+    GROUND = 0,
+    ITEM = 1,
+    ACTOR = 2,
     TOP = 10
 };
 
@@ -27,13 +28,15 @@ export default class MatchGrid extends AbsoluteContainer {
     match: Match;
     resources: Resources;
 
-    constructor(match: Match, resources: Resources) {
+    constructor(resources: Resources) {
         super();
         this.sortableChildren = true;
         this.graphics = {};
         this.resources = resources;
+    }
 
-        this.mutate(match);
+    setBounds(bounds: PIXI.Rectangle) {
+        super.setBounds(bounds);
     }
 
     /**
@@ -44,8 +47,17 @@ export default class MatchGrid extends AbsoluteContainer {
      * @param match 
      */
     mutate(match: Match) {
-        this.match = match;
+        this.calculateGridCellSize(match);
 
+        // Setup grid
+        const { height, width } = match.settings.map.props;
+        if (!this.grid || height !== this.grid.length || width !== this.grid[0].length) {
+            this.grid = [];
+            for (let i = 0; i < height; i++) {
+                this.grid[i] = new Array(width);
+            }
+        }
+        
         // Removed
         const graphics = new Set(Object.keys(this.graphics));
 
@@ -59,7 +71,7 @@ export default class MatchGrid extends AbsoluteContainer {
                 this.graphics[id] = graphic;
                 this.addChild(graphic);
             }
-            graphics.delete(id.toString());
+            graphics.delete(id);
         }
 
         // Handle new bombs
@@ -73,14 +85,52 @@ export default class MatchGrid extends AbsoluteContainer {
                 graphic.animationSpeed = 0.3; 
                 graphic.play();
                 graphic.zIndex = LAYERING.ITEM;
+                graphic.width = this.cellWidth;
+                graphic.height = this.cellWidth;
+                graphic.position.x = bomb.position.x * this.cellWidth;
+                graphic.position.y = bomb.position.y * this.cellWidth;
+
                 this.graphics[id] = graphic;
-                
                 this.addChild(graphic);
             }
+            graphics.delete(id);
         }
 
         // Handle new grid tiles
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const id = match.grid[y][x].id;
+                if (!this.grid[y][x] || !(id in this.graphics)) {
 
+                    let spriteName;
+                    switch (match.grid[y][x].type) {
+                        case CellType.OPEN:
+                        case CellType.SPAWN:
+                            spriteName = 'open';
+                            break;
+                        case CellType.BRICK:
+                            spriteName = 'brick';
+                            break;
+                        case CellType.SOLID:
+                            spriteName = 'solid';
+                            break;
+                    }
+
+                    const texture = this.resources[spriteName].texture;
+                    const graphic = new PIXI.Sprite(texture);
+                    graphic.position.x = x * this.cellWidth;
+                    graphic.position.y = y * this.cellWidth;
+                    graphic.width = this.cellWidth;
+                    graphic.height = this.cellWidth;
+                    graphic.zIndex = LAYERING.GROUND;
+
+                    this.graphics[id] = graphic;
+                    this.grid[y][x] = graphic;
+                    this.addChild(graphic);
+                }
+                graphics.delete(id);
+            }
+        }
 
         // Handle new powerups
 
@@ -90,10 +140,12 @@ export default class MatchGrid extends AbsoluteContainer {
         for (let id of graphics) {
             this.removeChild(this.graphics[id]);
         }
+
+        this.drawPlayers(match);
     }
 
-    drawPlayers() {
-        for (let player of this.match.players) {
+    drawPlayers(match: Match) {
+        for (let player of match.players) {
             const graphic = this.graphics[player.id] as PIXI.Graphics;
             if (!player.isAlive) {
                 graphic.clear();
@@ -118,23 +170,10 @@ export default class MatchGrid extends AbsoluteContainer {
         
     }
 
-    drawGridTile() {
-
-    }
-
-    drawGridTiles() {
-        const { width, height } = this.match.settings.map.props;
-        for (let i = 0; i < width; i++) {
-            for (let j = 0; j < height; j++) {
-                // this.match.grid[j][i]
-            }
-        }
-    }
-
-    calculateGridCellSize() { 
+    calculateGridCellSize(match: Match) { 
         this.cellWidth = Math.min(
-            this.getBounds().width / this.match.settings.map.props.width,
-            this.getBounds().height / this.match.settings.map.props.height
+            this.getBounds().width /  match.settings.map.props.width,
+            this.getBounds().height / match.settings.map.props.height
         );
     }
 

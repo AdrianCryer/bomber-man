@@ -7,6 +7,8 @@ import UserController from "./controllers/user-controller";
 import MVCBridge from "./bridge";
 import { Resources } from "./model/types";
 import Match from "./model/match";
+import shortUUID from "short-uuid";
+import { Direction } from "readline";
 
 /**
  * APP: Combines the Model, View and Controllers (MVC). 
@@ -30,6 +32,7 @@ import Match from "./model/match";
 
 const TICK_RATE = 64;
 const DEFAULT_GAME_SETTINGS = {
+    numberOfPlayers: 1,
     statusBoard: {
         alignment: 'left',
         splitRatio: 0.2
@@ -40,6 +43,9 @@ const MAPS = {
     'retro': "../maps/retro.txt",
     'basic': "../maps/basic.txt"
 };
+
+/** If this was the server, we can simply use the socket id. */
+const PLAYER_IDS = [shortUUID.generate()];
 
 export default class App {
 
@@ -58,7 +64,7 @@ export default class App {
 
         this.socket = new EventEmitter();
 
-        this.model = new Game(DEFAULT_GAME_SETTINGS);
+        this.model = new Game(DEFAULT_GAME_SETTINGS, PLAYER_IDS);
         this.view = new GameView(root, 1920, 1080);
         this.controller = new UserController(this.socket);
 
@@ -71,19 +77,43 @@ export default class App {
 
     /** This method will not touch the view / controller */
     setupServer() {
+        this.ticker = new Ticker();
+        this.ticker.stop();
+
         this.socket.on("play", () => {
             if (!this.model.inMatch) {
 
-                console.log("Starting match");
                 this.model.startDefaultMatch()
-                this.socket.emit("start_match", this.model);
+
+                // Setup fixed update ticker
+                this.ticker.add(() => {
+                    let timeNow = (new Date()).getTime();
+                    let timeDiff = timeNow - this.time
+
+                    if (timeDiff < Math.round(1000 / TICK_RATE)) {
+                        return;
+                    }
+                    this.time = timeNow;
+                    this.model.mutate(timeNow);
+                    this.socket.emit("update_match", this.model.currentMatch);
+                });
+                this.ticker.start();
             }
         });
         this.socket.on("place_bomb", () => {
             if (this.model.inMatch) {
-                // this.model.
+                const player = this.model.currentMatch.players.find(p => p.id === PLAYER_IDS[0]);
+                this.model.currentMatch.placeBomb(player);
             }
-        })
+        });
+        this.socket.on("set_moving", (direction: Direction) => {
+            const player = this.model.currentMatch.players.find(p => p.id === PLAYER_IDS[0]);
+            this.model.currentMatch.setPlayerMoving(player, direction);
+        });
+        this.socket.on("stop_moving", (direction: Direction) => {
+            const player = this.model.currentMatch.players.find(p => p.id === PLAYER_IDS[0]);
+            this.model.currentMatch.stopPlayerMoving(player, direction);
+        });
     }
 
     /** This method will not touch the model. */
@@ -92,39 +122,12 @@ export default class App {
             this.view.setupGame(game);
             this.view.setLoaded();
         });
-        this.socket.on("start_match", (match: Match) => {
-            this.view.startMatch(match);
-        });
         this.socket.on("update_match", (match: Match) => {
             this.view.updateMatch(match);
         });
 
         this.view.onPlay(() => this.socket.emit("play"));
         this.controller.setup();
-    }
-
-    setupMatch() {
-        this.ticker = new Ticker();
-        this.ticker.stop();
-
-        // Setup fixed update ticker
-        this.ticker.add(() => {
-            let timeNow = (new Date()).getTime();
-            let timeDiff = timeNow - this.time
-
-            if (timeDiff < Math.round(1000 / TICK_RATE)) {
-                return;
-            }
-            this.time = timeNow;
-            this.tick();
-        });
-    }
-
-    tick() {
-        // this.model.mutateMatch();
-        this.socket.emit("update_match", {
-            match: this.model.currentMatch
-        });
     }
 
     async loadMaps() {
@@ -149,6 +152,6 @@ export default class App {
         // Test loading
         setTimeout(() => {
             this.socket.emit("ready", this.model);
-        }, 2000);
+        }, 250);
     }
 }

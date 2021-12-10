@@ -79,6 +79,7 @@ export type Explosion = {
 };
 
 export type GridCell = {
+    id: string;
     type: CellType;
     bombs: Bomb[];
     explosionsCells: ExplosionCell[];
@@ -89,6 +90,7 @@ export type GridCell = {
 export default class Match {
 
     settings: MatchSettings;
+    playerIds: string[];
     grid: GridCell[][];
     players: Player[];
     bombs: Bomb[];
@@ -98,14 +100,14 @@ export default class Match {
     /** Number of elapsed ticks */
     time: number;
 
-    constructor(settings: MatchSettings) {
+    constructor(settings: MatchSettings, playerIds: string[]) {
         this.settings = settings;
+        this.playerIds = playerIds;
         this.grid = [];
         this.players = [];
         this.bombs = [];
         this.explosions = [];
         this.powerups = [];
-        this.time = 0;
 
         this.setup();
     }
@@ -114,6 +116,12 @@ export default class Match {
 
         // Set initial positions
         const startingPositions = this.settings.map.startingPositions;
+        const numPlayers = this.playerIds.length;
+        if (numPlayers > startingPositions.length) {
+            throw new Error("Too many players for the chosen map.");
+        } else if (numPlayers + this.settings.bots > startingPositions.length) {
+            throw new Error("Too many bots for the chosen map.");
+        }
 
         // Setup grid
         const { height, width } = this.settings.map.props;
@@ -132,7 +140,6 @@ export default class Match {
         // spawn bricks
         for (let i = 0; i < height; i++) {
             for (let j = 0; j < width; j++) {
-
                 if (this.grid[i][j].type === CellType.OPEN &&
                     Math.random() <= this.settings.brickSpawnChance) {
                     this.grid[i][j] = this.createCell(CellType.BRICK);
@@ -141,21 +148,23 @@ export default class Match {
         }
 
         // Add human player
-        this.players.push(new Player(
-            0,
-            {
-                initialPosition: startingPositions[0],
-                stats: Object.assign({}, this.settings.detaultStats)
-            }
-        ));
+        for (let [i, playerId] of this.playerIds.entries()) {
+            this.players.push(new Player(
+                playerId,
+                {
+                    initialPosition: startingPositions[i],
+                    stats: Object.assign({}, this.settings.detaultStats)
+                }
+            ));
+        }
 
         // Add bots
         for (let i = 0; i < this.settings.bots; i++) {
             this.players.push(
                 new Player(
-                    i + 1,
+                    shortUUID.generate(),
                     {
-                        initialPosition: startingPositions[i + 1],
+                        initialPosition: startingPositions[numPlayers + i],
                         stats: Object.assign({}, this.settings.detaultStats)
                     }
                 )
@@ -170,6 +179,7 @@ export default class Match {
 
     createCell(type: CellType): GridCell {
         return {
+            id: shortUUID.generate(),
             type,
             bombs: [],
             explosionsCells: [],
@@ -209,24 +219,6 @@ export default class Match {
             x += delta;
         }
         return { x, y };
-    }
-
-    createBomb(player: Player, position: Position) {
-        // if (player.bombCount > 0) {
-
-        // }
-        this.bombs.push({
-            id: shortUUID.generate(),
-            owner: player,
-            position: position,
-            explosionDuration: player.stats['explosionDuration'],
-            explosionRadius: player.stats['explosionRadius'],
-            timer: player.stats['bombTimer'],
-            isSliding: false,
-            power: 1,
-            slidingSpeed: 5,
-            timePlaced: this.time
-        });
     }
 
     removeBomb(bomb: Bomb) {
@@ -322,6 +314,7 @@ export default class Match {
                     this.createPowerup(pos);
                 }
 
+                // Todo: Should becareful about removing things.
                 this.grid[pos.y][pos.x] = this.createCell(CellType.OPEN);
             }
         }
@@ -364,6 +357,32 @@ export default class Match {
         currentCell.powerups.splice(i, 1);
     }
 
+    setPlayerMoving(player: Player, direction: Direction) {
+        player.wantsToMove = true;
+        player.movingDirection = direction;
+    }
+
+    stopPlayerMoving(player: Player, direction: Direction) {
+        if (player.wantsToMove && player.movingDirection === direction) {
+            player.wantsToMove = false;
+        }
+    }
+
+    placeBomb(player: Player) {
+        this.bombs.push({
+            id: shortUUID.generate(),
+            owner: player,
+            position: player.cellPosition,
+            explosionDuration: player.stats['explosionDuration'],
+            explosionRadius: player.stats['explosionRadius'],
+            timer: player.stats['bombTimer'],
+            isSliding: false,
+            power: 1,
+            slidingSpeed: 5,
+            timePlaced: this.time
+        });
+    }
+
     updatePlayerPosition(player: Player, nextPos: Position) {
         const currentCell = this.getCell(player.position);
         let i = currentCell.players.indexOf(player);
@@ -379,7 +398,7 @@ export default class Match {
 
             const { slidingDirection } = bomb;
 
-            const shouldExplode = (time >= bomb.timePlaced + bomb.timer);
+            const shouldExplode = (time >= bomb.timePlaced + bomb.timer * 1000);
             if (bomb.isSliding) {
                 const delta = bomb.slidingSpeed / this.settings.tickrate;
 
@@ -509,15 +528,14 @@ export default class Match {
 
     // Fixed update
     mutate(time: number) {
+        this.time = time;
         this.updateBombs(time);
         this.updateExplosions(time);
 
         for (let player of this.players) {
-            this.updatePlayerMovement(player)
+            this.updatePlayerMovement(player);
         }
 
         this.updateCellState(time);
-
-        this.time += 1;
     }
 }

@@ -1,3 +1,5 @@
+import { Position } from "./types";
+
 export type MapProperties = {
     height: number;
     width: number;
@@ -12,13 +14,12 @@ export enum CellType {
 
 export default class GameMap {
 
-    private _props: MapProperties;
-
+    props: MapProperties;
     grid: CellType[][];
-    _startingPositions: { x: number; y: number }[];
+    _startingPositions: Position[];
 
     constructor(props: MapProperties) {
-        this._props = props;
+        this.props = props;
         this.grid = [];
         for (let i = 0; i < props.height; i++) {
             this.grid[i] = new Array(props.width);
@@ -26,13 +27,8 @@ export default class GameMap {
         this._startingPositions = [];
     }
 
-    
-    public get startingPositions(): { x: number; y: number }[] {
+    public get startingPositions(): Position[] {
         return this._startingPositions
-    }
-
-    public get props(): MapProperties {
-        return this._props;
     }
 
     static loadFromFile(fileContents: string): GameMap {

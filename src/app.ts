@@ -6,6 +6,7 @@ import EventEmitter from "events";
 import UserController from "./controllers/user-controller";
 import MVCBridge from "./bridge";
 import { Resources } from "./model/types";
+import Match from "./model/match";
 
 /**
  * APP: Combines the Model, View and Controllers (MVC). 
@@ -35,37 +36,6 @@ const DEFAULT_GAME_SETTINGS = {
     }
 };
 
-const DEFAULT_MATCH_SETTINGS = {
-    map: 'retro',
-    bots: 1,
-    difficulty: 'easy',
-    tickrate: 64,
-    brickSpawnChance: 0.3,
-    powerupSpawnChance: 1,
-    statsSettings: {
-        speed: { min: 1, max: 8 },
-        explosionRadius: { min: 2, max: 10 },
-        explosionDuration: { min: 0.2, max: 1 },
-        bombCount: { min: 1, max: 5 },
-        bombTimer: { min: 0.2, max: 5 }
-    },
-    detaultStats: {
-        speed: 3,
-        explosionDuration: 0.5,
-        explosionRadius: 5,
-        bombCount: 1,
-        bombTimer: 3
-    },
-    powerups:  [
-        { name: 'Speed Up', stat: 'speed', delta: 1, rarity: 1 },
-        { name: 'Bomb range up', stat: 'explosionRadius', delta: 1, rarity: 1 },
-        { name: 'Big bombs', stat: 'explosionRadius', delta: 3, rarity: 2 }
-    ],
-    powerupRarityStepFunction: (maxRarity: number, val: number) => {
-        return Math.floor(maxRarity * val**2) + 1;
-    }
-};
-
 const MAPS = {
     'retro': "../maps/retro.txt",
     'basic': "../maps/basic.txt"
@@ -89,22 +59,48 @@ export default class App {
         this.socket = new EventEmitter();
 
         this.model = new Game(DEFAULT_GAME_SETTINGS);
-        this.view = new GameView(this.socket, root, 1920, 1080);
+        this.view = new GameView(root, 1920, 1080);
         this.controller = new UserController(this.socket);
 
-        this.setup();
+        this.setupServer();
+        this.setupClient();
 
         // Handle window resizing
         window.addEventListener('resize', () => this.view.resize());
     }
 
-    setup() {
+    /** This method will not touch the view / controller */
+    setupServer() {
         this.socket.on("play", () => {
             if (!this.model.inMatch) {
+
                 console.log("Starting match");
-                // this.model.startMatch('retro', DEFAULT_MATCH_SETTINGS);
+                this.model.startDefaultMatch()
+                this.socket.emit("start_match", this.model);
             }
         });
+        this.socket.on("place_bomb", () => {
+            if (this.model.inMatch) {
+                // this.model.
+            }
+        })
+    }
+
+    /** This method will not touch the model. */
+    setupClient() {
+        this.socket.on("ready", (game: Game) => {
+            this.view.setupGame(game);
+            this.view.setLoaded();
+        });
+        this.socket.on("start_match", (match: Match) => {
+            this.view.startMatch(match);
+        });
+        this.socket.on("update_match", (match: Match) => {
+            this.view.updateMatch(match);
+        });
+
+        this.view.onPlay(() => this.socket.emit("play"));
+        this.controller.setup();
     }
 
     setupMatch() {
@@ -125,9 +121,9 @@ export default class App {
     }
 
     tick() {
-        this.model.mutate();
-        this.socket.emit("update", {
-            game: this.model
+        // this.model.mutateMatch();
+        this.socket.emit("update_match", {
+            match: this.model.currentMatch
         });
     }
 
@@ -152,7 +148,7 @@ export default class App {
 
         // Test loading
         setTimeout(() => {
-            this.socket.emit("loaded", this.model);
+            this.socket.emit("ready", this.model);
         }, 2000);
     }
 }

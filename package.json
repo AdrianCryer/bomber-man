@@ -33,6 +33,7 @@
   "dependencies": {
     "@types/fontfaceobserver": "^2.1.0",
     "fontfaceobserver": "^2.1.0",
-    "pixi.js": "^6.2.0"
+    "pixi.js": "^6.2.0",
+    "short-uuid": "^4.2.0"
   }
 }

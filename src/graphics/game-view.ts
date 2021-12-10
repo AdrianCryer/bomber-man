@@ -35,11 +35,11 @@ export default class GameView {
     menuModal: Modal;
     
     isLoading: boolean;
-    socket: EventEmitter;
 
-    constructor(socket: EventEmitter, root: HTMLElement, defaultWidth?: number, defaultHeight?: number) {
+    onPlayFunction: () => void;
 
-        this.socket = socket;
+    constructor(root: HTMLElement, defaultWidth?: number, defaultHeight?: number) {
+
         this.root = root;
         this.isLoading = true;
 
@@ -58,31 +58,44 @@ export default class GameView {
         PIXI.settings.ROUND_PIXELS = true;
 
         this.viewBounds = new PIXI.Rectangle(0, 0, this.app.view.width, this.app.view.height);
-        this.setup();
         this.setupMenuModal();
 
         this.app.ticker.add(() => this.draw());
     }
 
-    setup() {
-        this.socket.on("loaded", (game: Game) => {
-            this.isLoading = false;
-            this.game = game;
-            this.menuModal.draw();
-        });
-        this.socket.on("start_match", (match: Match) => {
-            this.grid = new MatchGrid(match);
-        });
-        this.socket.on("update_match", (match: Match) => {
-            this.grid.mutate(match);
-        });
-        this.socket.on("start_game", () => {
-
-        });
+    setLoaded() {
+        this.isLoading = false;
+        this.menuModal.draw();
     }
 
-    renderLoading() {
-        // Make some loading text.s
+    onPlay(fn: () => void) {
+        this.onPlayFunction = fn
+    }
+
+    setupGame(game: Game) {
+        this.game = game;
+    }
+
+    startMatch(match: Match) {
+        this.app.stage.removeChild(this.menuModal);
+        this.grid = new MatchGrid(match, this.app.loader.resources);
+    }
+
+    updateMatch(match: Match) {
+        this.game.currentMatch = match;
+        this.grid.mutate(match);
+    }
+
+    showGameOverScreen() {
+
+    }
+
+    showWinScreen() {
+
+    }
+
+    setLoading(loading: boolean) {
+        this.isLoading = loading;
     }
 
     setupMenuModal() {
@@ -95,7 +108,7 @@ export default class GameView {
             darkenBackground: true,
             modalWidthRatio: 0.5,
             modalHeightRatio: 0.25,
-            onConfirm: () => this.socket.emit("play"),
+            onConfirm: () => this.onPlayFunction(),
         });
         this.app.stage.addChild(this.menuModal);
     }
@@ -119,39 +132,12 @@ export default class GameView {
         await font.load();
     }
 
-    async preloadMaps(paths: Record<string, string>): Promise<Record<string, GameMap>> {
-        // Load maps
-        for (let [name, path] of Object.entries(paths)) {
-            this.app.loader.add(name, path);
-        }
-        
-        let maps: Record<string, GameMap> = {};
-        // this.app.loader.onComplete.add(() => {
-        //     for (let name of Object.keys(paths)) {
-        //         const map = GameMap.loadFromFile(this.app.loader.resources["MAP_" + name].data);
-        //         maps[name] = map;
-        //     }
-        // });
-        const resources = await new Promise((resolve, reject)=> this.app.loader.load((loader, resources) => resolve(resources)));
-        console.log(resources)
-        // return resources;
-
-        return null;
-        // await new Promise(function(resolve, reject) {
-        //     this.app.loader.load(function() {
-        //       resolve();
-        //     });
-        // });
-        // return maps;
-    }
-
     draw() {
         if (this.isLoading) {
             this.app.renderer.backgroundColor = 0x564dff;
         } else if (this.game.inMatch) {
             this.menuModal.hidden = true;
+            this.grid.draw();
         }
-
-        // this.grid.draw();
     }
 }

@@ -1,3 +1,4 @@
+import shortUUID from "short-uuid";
 import GameMap, { CellType } from "./game-map";
 import Player from "../player";
 import { Direction, Position, PowerUpType, StatsConfig, StatType } from "./types";
@@ -43,6 +44,7 @@ export type PlayerConfig = {
 };
 
 export type Bomb = {
+    id: string;
     owner: Player;
     power: number;
     timePlaced: number;
@@ -102,6 +104,7 @@ export default class Match {
         this.players = [];
         this.bombs = [];
         this.explosions = [];
+        this.powerups = [];
         this.time = 0;
 
         this.setup();
@@ -208,11 +211,26 @@ export default class Match {
         return { x, y };
     }
 
-    createBomb(player: Player, position: Bomb) {
+    createBomb(player: Player, position: Position) {
+        // if (player.bombCount > 0) {
 
+        // }
+        this.bombs.push({
+            id: shortUUID.generate(),
+            owner: player,
+            position: position,
+            explosionDuration: player.stats['explosionDuration'],
+            explosionRadius: player.stats['explosionRadius'],
+            timer: player.stats['bombTimer'],
+            isSliding: false,
+            power: 1,
+            slidingSpeed: 5,
+            timePlaced: this.time
+        });
     }
 
     removeBomb(bomb: Bomb) {
+        // This is not going to work because the bomb position changes :((
         let i = this.bombs.indexOf(bomb);
         if (i !== - 1)
             this.bombs.splice(i, 1);

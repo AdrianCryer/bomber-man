@@ -29,7 +29,7 @@ export default class Player {
         this.cellPosition = Object.assign({}, initialPosition);
         this.position = Object.assign({}, initialPosition);
         this.stats = stats;
-        this.bombCount = 0;
+        this.bombCount = stats.bombCount;
     }
 
     setMoving(direction: Direction) {

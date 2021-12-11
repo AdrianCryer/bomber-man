@@ -262,8 +262,4 @@ export default class MatchGrid extends AbsoluteContainer {
             }
         }
     }
-
-    resize() {
-        throw new Error("Method not implemented.");
-    }
 }

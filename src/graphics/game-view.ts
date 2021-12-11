@@ -82,7 +82,6 @@ export default class GameView {
 
             const [boundsLeft, boundsRight] = 
                 AbsoluteContainer.horizontalSplit(this.viewBounds, STATSBOARD_SPLIT);
-            console.log(boundsLeft, boundsRight);
 
             this.grid = new MatchGrid(this.app.loader.resources);
             this.grid.setBounds(boundsRight);
@@ -133,9 +132,12 @@ export default class GameView {
         this.app.renderer.resize(window.innerWidth, window.innerHeight);
         this.viewBounds = new PIXI.Rectangle(0, 0, this.app.screen.width, this.app.screen.height);
 
-        if (this.game.inMatch) {
-            this.grid.setBounds(this.viewBounds);
-            this.grid.resize();
+        if (this.grid) {
+            // Just destroy and recreate
+            this.app.stage.removeChild(this.grid);
+            this.app.stage.removeChild(this.statusBoard);
+            this.grid = null;
+            this.updateMatch(this.game.currentMatch);
         }
     }
 

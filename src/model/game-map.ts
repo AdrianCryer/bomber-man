@@ -1,3 +1,5 @@
+import Position from "../util/Position";
+
 export type MapProperties = {
     height: number;
     width: number;
@@ -12,27 +14,17 @@ export enum CellType {
 
 export default class GameMap {
 
-    private _props: MapProperties;
-
+    props: MapProperties;
     grid: CellType[][];
-    _startingPositions: { x: number; y: number }[];
+    startingPositions: Position[];
 
     constructor(props: MapProperties) {
-        this._props = props;
+        this.props = props;
         this.grid = [];
         for (let i = 0; i < props.height; i++) {
             this.grid[i] = new Array(props.width);
         }
-        this._startingPositions = [];
-    }
-
-    
-    public get startingPositions(): { x: number; y: number }[] {
-        return this._startingPositions
-    }
-
-    public get props(): MapProperties {
-        return this._props;
+        this.startingPositions = [];
     }
 
     static loadFromFile(fileContents: string): GameMap {
@@ -42,8 +34,8 @@ export default class GameMap {
             height: rows.length,
             width: rows[0].split(" ").length
         });
-        for (let [i, row] of rows.entries()) {
-            for (let [j, cell] of row.split(" ").entries()) {
+        for (let [y, row] of rows.entries()) {
+            for (let [x, cell] of row.split(" ").entries()) {
                 let type: CellType = CellType.SOLID;
                 switch (cell) {
                     case 'o':
@@ -51,10 +43,10 @@ export default class GameMap {
                         break;
                     case 'x':
                         type = CellType.SPAWN;
-                        map.startingPositions.push({ y: i, x: j });
+                        map.startingPositions.push(new Position(x, y));
                         break;
                 }
-                map.updateCell(i, j, type);
+                map.updateCell(y, x, type);
             }
         }
         return map;

@@ -1,4 +1,4 @@
 import App from "./app";
 
-const app = new App(window, document.getElementById("game"));
+const app = new App(document.getElementById("game"));
 app.run();

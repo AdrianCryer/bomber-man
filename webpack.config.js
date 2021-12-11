@@ -22,6 +22,7 @@ const config = {
     new CopyPlugin({
       patterns: [
         { from: "assets/", to: "assets/", force: true },
+        { from: "maps/", to: "maps/", force: true },
       ]
     }),
 

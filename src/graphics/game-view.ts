@@ -98,16 +98,9 @@ export default class GameView {
                 boundsLeft.width,
                 gridBounds.height
             ));
-            console.log(this.statusBoard.getBounds())
-            this.statusBoard.update(match.players.map((p, i) => ({
-                position: i,
-                playerName: 'Player ' + i,
-                colour: 0xEA4C46,
-                playerStats: p.stats,
-                isAlive: p.isAlive
-            })));
         }
         this.grid.mutate(match);
+        this.statusBoard.mutate(match.players);
     }
 
     showGameOverScreen() {

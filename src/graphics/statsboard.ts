@@ -1,4 +1,5 @@
 import * as PIXI from "pixi.js";
+import Player from "../model/player";
 import { StatsConfig, Size, StatType } from "../model/types";
 import { AbsoluteContainer } from "./absolute-container";
 import { Resources } from "./match-grid";
@@ -22,20 +23,31 @@ const STAT_LABELS: Record<StatType, string> = {
     bombTimer: 'Bomb Timer'
 };
 
-export default class StatusBoard extends AbsoluteContainer {
+export default class StatsBoard extends AbsoluteContainer {
 
     frame: PIXI.Graphics;
     resources: Resources;
     padding: number;
+    players: Player[];
     playerRows: PlayerRow[];
 
-    constructor(bounds: PIXI.Rectangle, resources: Resources, padding: number = 20) {
+    constructor(resources: Resources, padding: number = 20) {
         super();
-        this.setBounds(bounds);
         this.resources = resources;
         this.padding = padding
         this.sortableChildren = true;
-        this.playerRows = [];
+        this.players = [];
+    }
+
+    setBounds(bounds: PIXI.Rectangle) {
+        super.setBounds(bounds);
+        // this.position.set(bounds.x, bounds.y);
+    }
+    
+    // requiresUpdate(newPlayers)
+
+    mutate(players: Player[]) {
+
     }
 
     update(playerRows: PlayerRow[], frameHeight?: number) {
@@ -43,8 +55,9 @@ export default class StatusBoard extends AbsoluteContainer {
         // Lets just remove all and start again
         this.removeChildren();
         this.playerRows = playerRows;
+        
 
-        this.renderFrame(frameHeight);
+        this.renderFrame();
         this.renderTitle();
 
         const rowHeight = this.bounds.width * PLAYER_ROW_HEIGHT_RATIO;
@@ -58,15 +71,16 @@ export default class StatusBoard extends AbsoluteContainer {
             }
             this.renderPlayerPowerups(playerRow, PLAYER_ROW_OFFSET + (offset + 2 * rowHeight) * i + rowHeight);
         }
+        this.position.set(this.bounds.x, this.bounds.y);
     }
 
-    renderFrame(height?: number) {
+    renderFrame() {
         this.frame = new PIXI.Graphics();
         this.frame.clear();
         this.frame
             .beginFill(0xBABDBC)
             .lineStyle({ width: 1, color: 0x333 })
-            .drawRect(0, 0, this.bounds.width, height || this.bounds.height)
+            .drawRect(0, 0, this.bounds.width, this.bounds.height)
             .endFill();
         this.addChild(this.frame);
     }

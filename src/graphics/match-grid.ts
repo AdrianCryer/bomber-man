@@ -1,7 +1,6 @@
 import * as PIXI from "pixi.js";
 import { CellType } from "../model/game-map";
-import Match, { Bomb, Explosion, ExplosionCell, GridCell, PowerUp } from "../model/match";
-import Player from "../model/player";
+import Match, { Explosion } from "../model/match";
 import { AbsoluteContainer } from "./absolute-container";
 
 export type GameRenderable<T, S extends PIXI.Container> = T & { graphic?: S, addedToCanvas: boolean };
@@ -14,6 +13,10 @@ enum LAYERING {
     TOP = 10
 };
 
+export type MatchGridSettings = {
+    backgroundColour: number;
+};
+
 export default class MatchGrid extends AbsoluteContainer {
 
     explosions: PIXI.Sprite[];
@@ -23,6 +26,7 @@ export default class MatchGrid extends AbsoluteContainer {
     grid: PIXI.Sprite[][];
 
     graphics: Record<string, PIXI.Container>; 
+    renderableArea: AbsoluteContainer;
     
     cellWidth: number;
     match: Match;
@@ -30,13 +34,37 @@ export default class MatchGrid extends AbsoluteContainer {
 
     constructor(resources: Resources) {
         super();
-        this.sortableChildren = true;
         this.graphics = {};
         this.resources = resources;
+        this.renderableArea = new AbsoluteContainer();
+        this.renderableArea.sortableChildren = true;
+        this.addChild(this.renderableArea);
     }
 
     setBounds(bounds: PIXI.Rectangle) {
         super.setBounds(bounds);
+    }
+
+    calculateGridCellSize(match: Match) { 
+        this.cellWidth = Math.min(
+            this.getBounds().width /  match.settings.map.props.width,
+            this.getBounds().height / match.settings.map.props.height
+        );
+    }
+
+    getRenderableGridBounds(match: Match): PIXI.Rectangle {
+        // if (!this.match) return PIXI.Rectangle.EMPTY;
+        this.calculateGridCellSize(match);
+        const { x, y, width, height } = this.getBounds();
+        const boundsWidth = this.cellWidth * match.settings.map.props.width;
+        const boundsHeight = this.cellWidth * match.settings.map.props.height;
+
+        return new PIXI.Rectangle(
+            x + width / 2 - boundsWidth / 2,
+            y + height / 2 - boundsHeight / 2,
+            boundsWidth,
+            boundsHeight
+        );
     }
 
     /**
@@ -48,6 +76,8 @@ export default class MatchGrid extends AbsoluteContainer {
      */
     mutate(match: Match) {
         this.calculateGridCellSize(match);
+        const renderableArea = this.getRenderableGridBounds(match);
+        this.renderableArea.position.set(renderableArea.x, renderableArea.y);
 
         // Setup grid
         const { height, width } = match.settings.map.props;
@@ -69,7 +99,7 @@ export default class MatchGrid extends AbsoluteContainer {
                 graphic.zIndex = LAYERING.ACTOR;
 
                 this.graphics[id] = graphic;
-                this.addChild(graphic);
+                this.renderableArea.addChild(graphic);
             }
             graphics.delete(id);
         }
@@ -87,7 +117,7 @@ export default class MatchGrid extends AbsoluteContainer {
                 graphic.play();
                 graphic.zIndex = LAYERING.ITEM;
                 this.graphics[id] = graphic;
-                this.addChild(graphic);
+                this.renderableArea.addChild(graphic);
             } else {
                 graphic = this.graphics[id];
             }
@@ -129,7 +159,7 @@ export default class MatchGrid extends AbsoluteContainer {
 
                     this.graphics[id] = graphic;
                     this.grid[y][x] = graphic;
-                    this.addChild(graphic);
+                    this.renderableArea.addChild(graphic);
                 }
                 graphics.delete(id);
             }
@@ -144,7 +174,7 @@ export default class MatchGrid extends AbsoluteContainer {
                 graphic.zIndex = LAYERING.ITEM;
 
                 this.graphics[id] = graphic;
-                this.addChild(graphic);
+                this.renderableArea.addChild(graphic);
             }
             graphic.clear();
             graphic
@@ -168,7 +198,7 @@ export default class MatchGrid extends AbsoluteContainer {
 
         // Remove things that are no longer in the game.
         for (let id of graphics) {
-            this.removeChild(this.graphics[id]);
+            this.renderableArea.removeChild(this.graphics[id]);
         }
 
         this.drawPlayers(match);
@@ -196,7 +226,7 @@ export default class MatchGrid extends AbsoluteContainer {
                 graphic.angle = angle;
                 
                 this.graphics[id] = graphic;
-                this.addChild(graphic);
+                this.renderableArea.addChild(graphic);
             }
 
             const x = (0.5 + cell.position.x) * this.cellWidth;
@@ -233,18 +263,7 @@ export default class MatchGrid extends AbsoluteContainer {
         }
     }
 
-    calculateGridCellSize(match: Match) { 
-        this.cellWidth = Math.min(
-            this.getBounds().width /  match.settings.map.props.width,
-            this.getBounds().height / match.settings.map.props.height
-        );
-    }
-
     resize() {
         throw new Error("Method not implemented.");
-    }
-
-    draw() {
-        
     }
 }

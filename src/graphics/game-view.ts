@@ -2,13 +2,11 @@ import * as PIXI from "pixi.js";
 import { SCALE_MODES } from "pixi.js";
 import FontFaceObserver from "fontfaceobserver";
 import Game from "../model/game";
-import { AbsoluteContainer } from "./absolute-container";
 import MatchGrid from "./match-grid";
 import Modal from "./modal";
-import StatusBoard from "./statusboard";
-import { EventEmitter } from "stream";
+import StatsBoard from "./statsboard";
 import Match from "../model/match";
-import GameMap from "../model/game-map";
+import { AbsoluteContainer } from "./absolute-container";
 
 const ASSETS = {    
     "solid": "../assets/solid-sprite.png",
@@ -19,6 +17,8 @@ const ASSETS = {
     "skull": "../assets/skull.png"
 };
 
+const STATSBOARD_SPLIT = 0.2;
+
 export default class GameView {
 
     root: HTMLElement;
@@ -28,7 +28,7 @@ export default class GameView {
     game: Game;
 
     grid: MatchGrid;
-    statusBoard: StatusBoard;
+    statusBoard: StatsBoard;
     gameOverModal: Modal;
     winModal: Modal;
     levelSelector: Modal;
@@ -79,9 +79,33 @@ export default class GameView {
     updateMatch(match: Match) {
         if (!this.grid) {
             this.menuModal.visible = false;
+
+            const [boundsLeft, boundsRight] = 
+                AbsoluteContainer.horizontalSplit(this.viewBounds, STATSBOARD_SPLIT);
+            console.log(boundsLeft, boundsRight);
+
             this.grid = new MatchGrid(this.app.loader.resources);
-            this.grid.setBounds(this.viewBounds);
+            this.grid.setBounds(boundsRight);
             this.app.stage.addChild(this.grid);
+
+            this.statusBoard = new StatsBoard(this.app.loader.resources);
+            this.app.stage.addChild(this.statusBoard);
+
+            const gridBounds = this.grid.getRenderableGridBounds(match)
+            this.statusBoard.setBounds(new PIXI.Rectangle(
+                boundsLeft.x,
+                gridBounds.y,
+                boundsLeft.width,
+                gridBounds.height
+            ));
+            console.log(this.statusBoard.getBounds())
+            this.statusBoard.update(match.players.map((p, i) => ({
+                position: i,
+                playerName: 'Player ' + i,
+                colour: 0xEA4C46,
+                playerStats: p.stats,
+                isAlive: p.isAlive
+            })));
         }
         this.grid.mutate(match);
     }

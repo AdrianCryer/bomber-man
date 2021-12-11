@@ -10,6 +10,7 @@ export class AbsoluteContainer extends Container {
 
     setBounds(bounds: Rectangle) {
         this.bounds = bounds;
+        // this.position.set(bounds.x, bounds.y);
     }
 
     getBounds(): Rectangle {
@@ -28,8 +29,8 @@ export class AbsoluteContainer extends Container {
         return instance;
     }
     
-    static horizontalSplit(container: AbsoluteContainer, splitRatio: number): [left: Rectangle, right: Rectangle] {
-        const { x, y, width, height } = container.getBounds();
+    static horizontalSplit(bounds: Rectangle, splitRatio: number): [left: Rectangle, right: Rectangle] {
+        const { x, y, width, height } = bounds;
         return [
             new Rectangle(x, y, width * splitRatio, height),
             new Rectangle(x + width * splitRatio, y, width * (1 - splitRatio), height),

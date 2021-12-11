@@ -1,7 +1,8 @@
 import shortUUID from "short-uuid";
+import Position from "../util/Position";
 import GameMap, { CellType } from "./game-map";
 import Player from "./player";
-import { Direction, Position, PowerUpType, StatsConfig, StatType } from "./types";
+import { Direction, PowerUpType, StatsConfig, StatType } from "./types";
 
 export type MatchSettings = {
 
@@ -83,7 +84,7 @@ export type Explosion = {
 export type GridCell = {
     id: string;
     type: CellType;
-    bombs: Bomb[];
+    // bombs: Bomb[];
     explosionsCells: ExplosionCell[];
     powerups: PowerUp[];
 };
@@ -139,11 +140,21 @@ export default class Match {
         }
 
         // spawn bricks
-        for (let i = 0; i < height; i++) {
-            for (let j = 0; j < width; j++) {
-                if (this.grid[i][j].type === CellType.OPEN &&
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                let skip = false;
+                for (let startPos of startingPositions) {
+                    if (Math.abs(startPos.x - x) < 2 && Math.abs(startPos.y - y) < 2) {
+                        skip = true;
+                        break;
+                    }
+                }
+                if (skip) {
+                    continue;
+                }
+                if (this.grid[y][x].type === CellType.OPEN &&
                     Math.random() <= this.settings.brickSpawnChance) {
-                    this.grid[i][j] = this.createCell(CellType.BRICK);
+                    this.grid[y][x] = this.createCell(CellType.BRICK);
                 }
             }
         }
@@ -177,13 +188,12 @@ export default class Match {
         }
     }
 
-    createCell(type: CellType): GridCell {
+    createCell(type: CellType, last?: GridCell): GridCell {
         return {
             id: shortUUID.generate(),
             type,
-            bombs: [],
-            explosionsCells: [],
-            powerups: []
+            explosionsCells: last ? last.explosionsCells : [],
+            powerups: last ? last.powerups : []
         }
     }
 
@@ -203,7 +213,7 @@ export default class Match {
 
     positionIsTraversable(position: Position): boolean {
         return !this.positionIsBlocked(position) &&
-            this.getCell(position).bombs.length == 0;
+            this.getBombsInPosition(position).length == 0;
     }
 
     getNextPosition(position: Position, direction: Direction, delta: number = 1): Position {
@@ -217,17 +227,24 @@ export default class Match {
         } else if (direction === Direction.RIGHT) {
             x += delta;
         }
-        return { x, y };
+        return new Position(x, y);
+    }
+
+    getBombsInPosition(position: Position): Bomb[] {
+        let bombs: Bomb[] = [];
+        for (let bomb of this.bombs) {
+            if (Position.equals(bomb.position.round(), position)) {
+                bombs.push(bomb);
+            }
+        }
+        return bombs;
     }
 
     removeBomb(bomb: Bomb) {
-        // This is not going to work because the bomb position changes :((
         let i = this.bombs.indexOf(bomb);
-        if (i !== - 1)
+        if (i !== - 1) {
             this.bombs.splice(i, 1);
-        i = this.getCell(bomb.position).bombs.indexOf(bomb);
-        if (i != -1)
-            this.getCell(bomb.position).bombs.splice(i, 1);
+        }
     }
 
     createExplosion(source: Bomb, time: number) {
@@ -264,7 +281,6 @@ export default class Match {
         }];
 
         const handleNextCell = (direction: Direction, position: Position) => {
-
             if (stopped[direction]) {
                 return;
             }
@@ -294,10 +310,10 @@ export default class Match {
         }
 
         while (i < radius && !stopped.every(e => e == true)) {
-            handleNextCell(Direction.RIGHT, { x: x + i, y });
-            handleNextCell(Direction.LEFT, { x: x - i, y });
-            handleNextCell(Direction.DOWN, { x, y: y + i });
-            handleNextCell(Direction.UP, { x, y: y - i });
+            handleNextCell(Direction.RIGHT, new Position(x + i, y));
+            handleNextCell(Direction.LEFT, new Position(x - i, y));
+            handleNextCell(Direction.DOWN, new Position(x,y + i));
+            handleNextCell(Direction.UP, new Position(x,y - i));
             i++;
         }
 
@@ -316,8 +332,7 @@ export default class Match {
                     this.createPowerup(pos);
                 }
 
-                // Todo: Should becareful about removing things.
-                this.grid[pos.y][pos.x] = this.createCell(CellType.OPEN);
+                this.grid[pos.y][pos.x] = this.createCell(CellType.OPEN, cell);
             }
         }
     }
@@ -345,13 +360,14 @@ export default class Match {
             id: shortUUID.generate(),
             position,
             type: allPowerups[Math.floor(Math.random() * allPowerups.length)],
-        };
+        } as PowerUp;
+
         this.powerups.push(powerup);
         this.getCell(position).powerups.push(powerup);
     }
 
     removePowerup(powerup: PowerUp) {
-        const currentCell = this.getCell(powerup.position);
+        let currentCell = this.getCell(powerup.position);
         let i = this.powerups.indexOf(powerup);
         if (i !== -1) {
             this.powerups.splice(i, 1);
@@ -372,10 +388,11 @@ export default class Match {
     }
 
     placeBomb(player: Player) {
-        this.bombs.push({
+        const position = player.position.round();
+        const bomb = {
             id: shortUUID.generate(),
             owner: player,
-            position: player.getNearestPosition(),
+            position,
             explosionDuration: player.stats['explosionDuration'],
             explosionRadius: player.stats['explosionRadius'],
             timer: player.stats['bombTimer'],
@@ -383,7 +400,8 @@ export default class Match {
             power: 1,
             slidingSpeed: 5,
             timePlaced: this.time
-        });
+        };
+        this.bombs.push(bomb);
     }
 
     updateBombs(time: number) {
@@ -396,10 +414,7 @@ export default class Match {
                 const delta = bomb.slidingSpeed / this.settings.tickrate;
 
                 bomb.position = this.getNextPosition(bomb.position, slidingDirection, delta);
-                const closest = {
-                    x: Math.round(bomb.position.x),
-                    y: Math.round(bomb.position.y)
-                };
+                const closest = bomb.position.round();
                 const next = this.getNextPosition(closest, slidingDirection);
 
                 if (shouldExplode ||
@@ -435,7 +450,7 @@ export default class Match {
             if (!this.positionIsBlocked(nextPos)) {
 
                 let canMove = true;
-                const bombs = this.getCell(nextPos).bombs;
+                const bombs = this.getBombsInPosition(nextPos);
 
                 // Position contains bomb: can only move if can slide bomb
                 if (bombs.length > 0) {
@@ -468,7 +483,7 @@ export default class Match {
 
             if (player.moveTransitionPercent === 1) {
                 player.inTransition = false;
-                player.position = player.getNearestPosition();
+                player.position = player.position.round();
             }
         }
     }
@@ -487,16 +502,16 @@ export default class Match {
             for (let x = 0; x < width; x++) {
 
                 const cell = this.grid[y][x];
-                const pos = { x, y };
-
+                const pos = new Position(x, y);
+                
                 for (let player of this.players) {
-                    if (positionEquals(player.getNearestPosition(), pos)) {
+
+                    if (Position.equals(player.position.round(), pos)) {
                         // Check for explosion death
                         if (cell.explosionsCells.length !== 0) {
                             player.isAlive = false;
                         }
                         for (let powerup of cell.powerups) {
-                            console.log(powerup);
                             player.stats[powerup.type.stat] += powerup.type.delta;
                             this.removePowerup(powerup);
                         }
@@ -518,8 +533,4 @@ export default class Match {
 
         this.updateCellState(time);
     }
-}
-
-function positionEquals(a: Position, b: Position) {
-    return a.x === b.x && a.y === b.y;
 }

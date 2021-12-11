@@ -1,4 +1,4 @@
-import * as PIXI from "pixi.js";
+import Position from "../util/Position";
 
 export enum Direction {
     UP = 0,
@@ -7,7 +7,7 @@ export enum Direction {
     RIGHT = 3,
 }
 
-export type Position = { x: number; y: number };
+// export type Position = { x: number; y: number };
 
 export type Size = { width: number; height: number };
 

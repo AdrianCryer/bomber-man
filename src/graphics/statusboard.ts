@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { Position, StatsConfig, Size, StatType } from "../model/types";
+import { StatsConfig, Size, StatType } from "../model/types";
 import { AbsoluteContainer } from "./absolute-container";
 import { Resources } from "./match-grid";
 
@@ -24,7 +24,6 @@ const STAT_LABELS: Record<StatType, string> = {
 
 export default class StatusBoard extends AbsoluteContainer {
 
-    anchor: Position;
     frame: PIXI.Graphics;
     resources: Resources;
     padding: number;

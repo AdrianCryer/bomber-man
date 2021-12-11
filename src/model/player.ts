@@ -1,4 +1,5 @@
-import { Direction, Position, StatsConfig } from "./types";
+import Position from "../util/Position";
+import { Direction, StatsConfig } from "./types";
 
 type PlayerConfig = {
     initialPosition: Position;
@@ -22,16 +23,9 @@ export default class Player {
         this.wantsToMove = false;
         this.inTransition = false;
         this.moveTransitionPercent = 0;
-        this.position = Object.assign({}, initialPosition);
+        this.position = initialPosition.clone();
         this.stats = stats;
         this.bombCount = stats.bombCount;
-    }
-
-    getNearestPosition() {
-        return {
-            x: Math.round(this.position.x),
-            y: Math.round(this.position.y),
-        }
     }
 
     setMoving(direction: Direction) {

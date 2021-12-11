@@ -1,4 +1,4 @@
-import { Position } from "./types";
+import Position from "../util/Position";
 
 export type MapProperties = {
     height: number;
@@ -16,7 +16,7 @@ export default class GameMap {
 
     props: MapProperties;
     grid: CellType[][];
-    _startingPositions: Position[];
+    startingPositions: Position[];
 
     constructor(props: MapProperties) {
         this.props = props;
@@ -24,11 +24,7 @@ export default class GameMap {
         for (let i = 0; i < props.height; i++) {
             this.grid[i] = new Array(props.width);
         }
-        this._startingPositions = [];
-    }
-
-    public get startingPositions(): Position[] {
-        return this._startingPositions
+        this.startingPositions = [];
     }
 
     static loadFromFile(fileContents: string): GameMap {
@@ -38,8 +34,8 @@ export default class GameMap {
             height: rows.length,
             width: rows[0].split(" ").length
         });
-        for (let [i, row] of rows.entries()) {
-            for (let [j, cell] of row.split(" ").entries()) {
+        for (let [y, row] of rows.entries()) {
+            for (let [x, cell] of row.split(" ").entries()) {
                 let type: CellType = CellType.SOLID;
                 switch (cell) {
                     case 'o':
@@ -47,10 +43,10 @@ export default class GameMap {
                         break;
                     case 'x':
                         type = CellType.SPAWN;
-                        map.startingPositions.push({ y: i, x: j });
+                        map.startingPositions.push(new Position(x, y));
                         break;
                 }
-                map.updateCell(i, j, type);
+                map.updateCell(y, x, type);
             }
         }
         return map;

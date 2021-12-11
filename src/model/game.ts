@@ -20,7 +20,7 @@ const DEFAULT_MATCH_SETTINGS: Omit<MatchSettings, 'map'> = {
     detaultStats: {
         speed: 3,
         explosionDuration: 0.5,
-        explosionRadius: 5,
+        explosionRadius: 4,
         bombCount: 1,
         bombTimer: 3
     },

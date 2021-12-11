@@ -217,17 +217,17 @@ export default class Match {
     }
 
     getNextPosition(position: Position, direction: Direction, delta: number = 1): Position {
-        let { x, y } = position;
+        let nextPos = position.clone();
         if (direction === Direction.UP) {
-            y -= delta;
+            nextPos.y -= delta;
         } else if (direction === Direction.DOWN) {
-            y += delta;
+            nextPos.y += delta;
         } else if (direction === Direction.LEFT) {
-            x -= delta;
+            nextPos.x -= delta;
         } else if (direction === Direction.RIGHT) {
-            x += delta;
+            nextPos.x += delta;
         }
-        return new Position(x, y);
+        return nextPos;
     }
 
     getBombsInPosition(position: Position): Bomb[] {
@@ -268,7 +268,7 @@ export default class Match {
 
         const radius = source.explosionRadius;
         let { x, y } = source.position;
-        let i = 1;
+        let i = 0;
         let stopped = Array(4).fill(false).slice();
 
         let cells: ExplosionCell[] = [{
@@ -284,7 +284,6 @@ export default class Match {
             if (stopped[direction]) {
                 return;
             }
-
             const cell = {
                 id: shortUUID.generate(),
                 direction,
@@ -292,21 +291,23 @@ export default class Match {
                 intensity: source.power,
                 isCentre: false,
             };
-
             let isStopping = (i === radius - 1);
             if (i < radius - 1) {
                 const next = this.getNextPosition(position, direction);
                 if (!this.positionIsInBounds(next) || this.getCell(next).type === CellType.SOLID) {
                     isStopping = true;
                 }
-            } else if (this.getCell(position).type === CellType.BRICK) {
+            } 
+            if (this.getCell(position).type === CellType.BRICK) {
                 isStopping = true;
             }
 
             if (isStopping) {
                 stopped[direction] = true;
             }
-            cells.push({ ...cell, isEnd: isStopping });
+            if (i !== 0) {
+                cells.push({ ...cell, isEnd: isStopping });
+            }
         }
 
         while (i < radius && !stopped.every(e => e == true)) {

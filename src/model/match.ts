@@ -326,6 +326,12 @@ export default class Match {
             let pos = explosionCell.position;
 
             let cell = this.getCell(pos);
+            
+            // Destroy exploded powerups
+            for (let powerup of cell.powerups) {
+                this.removePowerup(powerup);
+            }
+            
             if (cell.type === CellType.BRICK) {
 
                 // Try spawn power up at center 

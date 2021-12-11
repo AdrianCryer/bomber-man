@@ -92,7 +92,7 @@ export default class MatchGrid extends AbsoluteContainer {
         const graphics = new Set(Object.keys(this.graphics));
 
         // Handle new players
-        for (let player of match.players) {
+        for (let player of Object.values(match.players)) {
             const id = player.id;
             if (!(id in this.graphics)) {
                 const graphic = new PIXI.Graphics();
@@ -242,7 +242,7 @@ export default class MatchGrid extends AbsoluteContainer {
     }
 
     drawPlayers(match: Match) {
-        for (let player of match.players) {
+        for (let player of Object.values(match.players)) {
             const graphic = this.graphics[player.id] as PIXI.Graphics;
             if (!player.isAlive) {
                 graphic.clear();

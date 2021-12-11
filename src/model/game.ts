@@ -61,6 +61,11 @@ export default class Game {
         });
     }
 
+    endCurrentMatch() {
+        this.inMatch = false;
+        this.currentMatch = null;
+    }
+
     addMap(name: string, map: GameMap) {
         this.maps[name] = map;
     }

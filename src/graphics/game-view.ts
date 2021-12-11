@@ -33,15 +33,12 @@ export default class GameView {
     winModal: Modal;
     levelSelector: Modal;
     menuModal: Modal;
-    
-    isLoading: boolean;
 
     onPlayFunction: () => void;
 
     constructor(root: HTMLElement, defaultWidth?: number, defaultHeight?: number) {
 
         this.root = root;
-        this.isLoading = true;
 
         this.app = new PIXI.Application({
             width: defaultWidth,
@@ -49,6 +46,8 @@ export default class GameView {
             antialias: false,
             resizeTo: window
         });
+
+        this.app.renderer.backgroundColor = 0x564dff;
 
         this.app.stage.sortableChildren = true;
         root.appendChild(this.app.view);
@@ -58,22 +57,18 @@ export default class GameView {
         PIXI.settings.ROUND_PIXELS = true;
 
         this.viewBounds = new PIXI.Rectangle(0, 0, this.app.view.width, this.app.view.height);
-        this.setupMenuModal();
-
-        this.app.ticker.add(() => this.draw());
     }
 
-    setLoaded() {
-        this.isLoading = false;
-        this.menuModal.draw();
-    }
 
     onPlay(fn: () => void) {
         this.onPlayFunction = fn
     }
 
-    setupGame(game: Game) {
-        this.game = game;
+    initialise() {
+        this.setupMenuModal();
+        this.setupGameOverModal();
+        this.menuModal.draw();
+        this.gameOverModal.draw();
     }
 
     updateMatch(match: Match) {
@@ -99,19 +94,64 @@ export default class GameView {
             ));
         }
         this.grid.mutate(match);
-        this.statusBoard.mutate(match.players);
+        this.statusBoard.mutate(Object.values(match.players));
+    }
+
+    setupGameOverModal() {
+        const skullTexture = this.app.loader.resources['skull'].texture;
+        const skull = new PIXI.Sprite(skullTexture);
+
+        skull.texture.baseTexture.scaleMode = PIXI.SCALE_MODES.NEAREST;
+        skull.width = 120;
+        skull.height = 120;
+        skull.anchor.set(0.5, 0.5);
+        skull.tint = 0x262626;
+
+        this.gameOverModal = new Modal(this.viewBounds, {
+            padding: 40,
+            title: "You loose",
+            showCancelButton: true,
+            cancelButtonText: "Retry",
+            confirmButtonText: "Menu",
+            darkenBackground: true,
+            modalWidthRatio: 0.5,
+            modalHeightRatio: 0.4,
+            icon: skull,
+            onConfirm: () => {
+                this.app.stage.removeChild(this.grid);
+                this.app.stage.removeChild(this.statusBoard);
+                this.grid = null;
+                this.showMenuScreen();
+            },
+            onCancel: () => {
+                this.app.stage.removeChild(this.grid);
+                this.app.stage.removeChild(this.statusBoard);
+                this.grid = null;
+                this.gameOverModal.visible = false;
+                this.onPlayFunction()
+            }
+        });
+        this.gameOverModal.zIndex = 10;
+        this.app.stage.addChild(this.gameOverModal);
+        this.gameOverModal.visible = false;
+    }
+
+    showMenuScreen() {
+        console.log("Showing menu screen");
+        this.menuModal.visible = true;
+        this.gameOverModal.visible = false;
+        if (this.grid) {
+            this.grid.visible = false;
+            this.statusBoard.visible = false;
+        }
     }
 
     showGameOverScreen() {
-
+        this.gameOverModal.visible = true;
     }
 
     showWinScreen() {
 
-    }
-
-    setLoading(loading: boolean) {
-        this.isLoading = loading;
     }
 
     setupMenuModal() {
@@ -126,6 +166,7 @@ export default class GameView {
             onConfirm: () => this.onPlayFunction(),
         });
         this.app.stage.addChild(this.menuModal);
+        this.menuModal.visible = false;
     }
 
     resize() {
@@ -133,7 +174,6 @@ export default class GameView {
         this.viewBounds = new PIXI.Rectangle(0, 0, this.app.screen.width, this.app.screen.height);
 
         if (this.grid) {
-            // Just destroy and recreate
             this.app.stage.removeChild(this.grid);
             this.app.stage.removeChild(this.statusBoard);
             this.grid = null;
@@ -151,13 +191,5 @@ export default class GameView {
 
         const font = new FontFaceObserver("oldschool");
         await font.load();
-    }
-
-    draw() {
-        if (this.isLoading) {
-            this.app.renderer.backgroundColor = 0x564dff;
-        } else if (this.game.inMatch) {
-            // this.grid.draw();
-        }
     }
 }

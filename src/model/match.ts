@@ -84,7 +84,6 @@ export type Explosion = {
 export type GridCell = {
     id: string;
     type: CellType;
-    // bombs: Bomb[];
     explosionsCells: ExplosionCell[];
     powerups: PowerUp[];
 };
@@ -94,7 +93,7 @@ export default class Match {
     settings: MatchSettings;
     playerIds: string[];
     grid: GridCell[][];
-    players: Player[];
+    players: Record<string, Player>;
     bombs: Bomb[];
     powerups: PowerUp[];
     explosions: Explosion[];
@@ -106,7 +105,7 @@ export default class Match {
         this.settings = settings;
         this.playerIds = playerIds;
         this.grid = [];
-        this.players = [];
+        this.players = {};
         this.bombs = [];
         this.explosions = [];
         this.powerups = [];
@@ -161,29 +160,28 @@ export default class Match {
 
         // Add human player
         for (let [i, playerId] of this.playerIds.entries()) {
-            this.players.push(new Player(
+            this.players[playerId] = new Player(
                 playerId,
                 {
                     initialPosition: startingPositions[i],
                     stats: Object.assign({}, this.settings.detaultStats)
                 }
-            ));
+            );
         }
 
         // Add bots
         for (let i = 0; i < this.settings.bots; i++) {
-            this.players.push(
-                new Player(
-                    shortUUID.generate(),
-                    {
-                        initialPosition: startingPositions[numPlayers + i],
-                        stats: Object.assign({}, this.settings.detaultStats)
-                    }
-                )
-            )
+            const playerId = shortUUID.generate();
+            this.players[playerId] = new Player(
+                playerId,
+                {
+                    initialPosition: startingPositions[numPlayers + i],
+                    stats: Object.assign({}, this.settings.detaultStats)
+                }
+            );
         }
 
-        for (let player of this.players) {
+        for (let player of Object.values(this.players)) {
             player.isAlive = true;
         }
     }
@@ -511,7 +509,7 @@ export default class Match {
                 const cell = this.grid[y][x];
                 const pos = new Position(x, y);
                 
-                for (let player of this.players) {
+                for (let player of Object.values(this.players)) {
 
                     if (Position.equals(player.position.round(), pos)) {
                         // Check for explosion death
@@ -534,7 +532,7 @@ export default class Match {
         this.updateBombs(time);
         this.updateExplosions(time);
 
-        for (let player of this.players) {
+        for (let player of Object.values(this.players)) {
             this.updatePlayerMovement(player);
         }
 

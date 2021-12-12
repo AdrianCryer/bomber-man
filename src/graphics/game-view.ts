@@ -109,13 +109,13 @@ export default class GameView {
 
         this.gameOverModal = new Modal(this.viewBounds, {
             padding: 40,
-            title: "You loose",
+            title: "Game Over",
             showCancelButton: true,
             cancelButtonText: "Retry",
             confirmButtonText: "Menu",
             darkenBackground: true,
-            modalWidthRatio: 0.5,
-            modalHeightRatio: 0.4,
+            modalSizeRatio: { width: 0.6, height: 0.5 },
+            buttonSizeRatio: { width: 0.2, height: 0.1 },
             icon: skull,
             onConfirm: () => {
                 this.app.stage.removeChild(this.grid);
@@ -161,8 +161,8 @@ export default class GameView {
             showCancelButton: false,
             confirmButtonText: "Play",
             darkenBackground: true,
-            modalWidthRatio: 0.5,
-            modalHeightRatio: 0.25,
+            modalSizeRatio: { width: 0.5, height: 0.25 },
+            buttonSizeRatio: { width: 0.2, height: 0.2 },
             onConfirm: () => this.onPlayFunction(),
         });
         this.app.stage.addChild(this.menuModal);

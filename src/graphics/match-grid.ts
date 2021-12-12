@@ -1,6 +1,7 @@
 import * as PIXI from "pixi.js";
 import { CellType } from "../model/game-map";
 import Match, { Explosion } from "../model/match";
+import MovableActor from "../model/movable-actor";
 import { AbsoluteContainer } from "./absolute-container";
 
 export type GameRenderable<T, S extends PIXI.Container> = T & { graphic?: S, addedToCanvas: boolean };
@@ -91,19 +92,6 @@ export default class MatchGrid extends AbsoluteContainer {
         // Removed
         const graphics = new Set(Object.keys(this.graphics));
 
-        // Handle new players
-        for (let player of Object.values(match.players)) {
-            const id = player.id;
-            if (!(id in this.graphics)) {
-                const graphic = new PIXI.Graphics();
-                graphic.zIndex = LAYERING.ACTOR;
-
-                this.graphics[id] = graphic;
-                this.renderableArea.addChild(graphic);
-            }
-            graphics.delete(id);
-        }
-
         // Handle new bombs
         for (let bomb of match.bombs) {
 
@@ -191,9 +179,15 @@ export default class MatchGrid extends AbsoluteContainer {
             graphics.delete(id);
         }
 
-        // Handle new explosions
+        // Handle explosions
         for (let explosion of match.explosions) {
             this.drawExplosion(explosion, graphics);
+        }
+        for (let player of Object.values(match.players)) {
+            this.drawActor(player, graphics);
+        }
+        for (let bot of Object.values(match.bots)) {
+            this.drawActor(bot, graphics);
         }
 
         // Remove things that are no longer in the game.
@@ -201,7 +195,6 @@ export default class MatchGrid extends AbsoluteContainer {
             this.renderableArea.removeChild(this.graphics[id]);
         }
 
-        this.drawPlayers(match);
     }
 
     drawExplosion(explosion: Explosion, check: Set<string>) {
@@ -241,25 +234,33 @@ export default class MatchGrid extends AbsoluteContainer {
         }
     }
 
-    drawPlayers(match: Match) {
-        for (let player of Object.values(match.players)) {
-            const graphic = this.graphics[player.id] as PIXI.Graphics;
-            if (!player.isAlive) {
-                graphic.clear();
-                return;
-            }
-            if (player.isAlive) {
-                graphic.clear();
-                graphic
-                    .beginFill(0xEA4C46)
-                    .drawRect(
-                        (0.25 + player.position.x) * this.cellWidth, 
-                        (0.25 + player.position.y) * this.cellWidth, 
-                        this.cellWidth / 2,
-                        this.cellWidth / 2
-                    )
-                    .endFill();
-            }
+    drawActor(actor: MovableActor, check: Set<string>) {
+        const id = actor.id;
+        if (!(id in this.graphics)) {
+            const graphic = new PIXI.Graphics();
+            graphic.zIndex = LAYERING.ACTOR;
+
+            this.graphics[id] = graphic;
+            this.renderableArea.addChild(graphic);
+        }
+        check.delete(id);
+
+        const graphic = this.graphics[actor.id] as PIXI.Graphics;
+        if (!actor.isAlive) {
+            graphic.clear();
+            return;
+        }
+        if (actor.isAlive) {
+            graphic.clear();
+            graphic
+                .beginFill(0xEA4C46)
+                .drawRect(
+                    (0.25 + actor.position.x) * this.cellWidth, 
+                    (0.25 + actor.position.y) * this.cellWidth, 
+                    this.cellWidth / 2,
+                    this.cellWidth / 2
+                )
+                .endFill();
         }
     }
 }

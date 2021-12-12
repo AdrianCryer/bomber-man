@@ -6,8 +6,8 @@ import EventEmitter from "events";
 import UserController from "./controllers/user-controller";
 import Match from "./model/match";
 import shortUUID from "short-uuid";
-import { Direction } from "readline";
 import { Resources } from "./graphics/match-grid";
+import { Direction } from "./model/types";
 
 /**
  * APP: Combines the Model, View and Controllers (MVC). 
@@ -109,16 +109,19 @@ export default class App {
         this.socket.on("place_bomb", () => {
             if (this.model.inMatch) {
                 const player = this.model.currentMatch.players[THIS_PLAYER_ID];
-                this.model.currentMatch.placeBomb(player);
+                player.placeBomb();
+                // this.model.currentMatch.placeBomb(player);
             }
         });
         this.socket.on("set_moving", (direction: Direction) => {
             const player = this.model.currentMatch.players[THIS_PLAYER_ID];
-            this.model.currentMatch.setPlayerMoving(player, direction);
+            player.setMoving(direction);
+            // this.model.currentMatch.setPlayerMoving(player, direction);
         });
         this.socket.on("stop_moving", (direction: Direction) => {
             const player = this.model.currentMatch.players[THIS_PLAYER_ID];
-            this.model.currentMatch.stopPlayerMoving(player, direction);
+            player.stopMoving(direction);
+            // this.model.currentMatch.stopPlayerMoving(player, direction);
         });
     }
 

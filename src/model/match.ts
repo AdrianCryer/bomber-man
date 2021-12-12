@@ -1,6 +1,8 @@
 import shortUUID from "short-uuid";
 import Position from "../util/Position";
+import Bot from "./bot";
 import GameMap, { CellType } from "./game-map";
+import MovableActor from "./movable-actor";
 import Player from "./player";
 import { Direction, PowerUpType, StatsConfig, StatType } from "./types";
 
@@ -97,6 +99,7 @@ export default class Match {
     bombs: Bomb[];
     powerups: PowerUp[];
     explosions: Explosion[];
+    bots: Record<string, Bot>;
 
     /** Number of elapsed ticks */
     time: number;
@@ -105,10 +108,12 @@ export default class Match {
         this.settings = settings;
         this.playerIds = playerIds;
         this.grid = [];
-        this.players = {};
         this.bombs = [];
         this.explosions = [];
         this.powerups = [];
+
+        this.players = {};
+        this.bots = {};
 
         this.setup();
     }
@@ -162,22 +167,18 @@ export default class Match {
         for (let [i, playerId] of this.playerIds.entries()) {
             this.players[playerId] = new Player(
                 playerId,
-                {
-                    initialPosition: startingPositions[i],
-                    stats: Object.assign({}, this.settings.detaultStats)
-                }
+                startingPositions[i],
+                Object.assign({}, this.settings.detaultStats)
             );
         }
 
         // Add bots
         for (let i = 0; i < this.settings.bots; i++) {
-            const playerId = shortUUID.generate();
-            this.players[playerId] = new Player(
-                playerId,
-                {
-                    initialPosition: startingPositions[numPlayers + i],
-                    stats: Object.assign({}, this.settings.detaultStats)
-                }
+            const id = shortUUID.generate();
+            this.bots[id] = new Bot(
+                id,
+                startingPositions[numPlayers + i].clone(),
+                Object.assign({}, this.settings.detaultStats)
             );
         }
 
@@ -381,34 +382,6 @@ export default class Match {
         currentCell.powerups.splice(i, 1);
     }
 
-    setPlayerMoving(player: Player, direction: Direction) {
-        player.wantsToMove = true;
-        player.movingDirection = direction;
-    }
-
-    stopPlayerMoving(player: Player, direction: Direction) {
-        if (player.wantsToMove && player.movingDirection === direction) {
-            player.wantsToMove = false;
-        }
-    }
-
-    placeBomb(player: Player) {
-        const position = player.position.round();
-        const bomb = {
-            id: shortUUID.generate(),
-            owner: player,
-            position,
-            explosionDuration: player.stats['explosionDuration'],
-            explosionRadius: player.stats['explosionRadius'],
-            timer: player.stats['bombTimer'],
-            isSliding: false,
-            power: 1,
-            slidingSpeed: 5,
-            timePlaced: this.time
-        };
-        this.bombs.push(bomb);
-    }
-
     updateBombs(time: number) {
         for (let [i, bomb] of this.bombs.entries()) {
 
@@ -443,64 +416,6 @@ export default class Match {
         }
     }
 
-    updatePlayerMovement(player: Player) {
-        if (!player.isAlive) {
-            return;
-        }
-
-        const { inTransition, wantsToMove, movingDirection, position } = player;
-        if (!inTransition && wantsToMove) {
-
-            const nextPos = this.getNextPosition(position, movingDirection);
-            if (!this.positionIsBlocked(nextPos)) {
-
-                let canMove = true;
-                const bombs = this.getBombsInPosition(nextPos);
-
-                // Position contains bomb: can only move if can slide bomb
-                if (bombs.length > 0) {
-                    const bombNextPos = this.getNextPosition(nextPos, movingDirection);
-                    canMove = this.positionIsTraversable(bombNextPos);
-
-                    if (canMove) {
-                        for (let bomb of bombs) {
-                            bomb.isSliding = true;
-                            bomb.slidingDirection = movingDirection;
-                        }
-                    }
-                }
-
-                if (canMove) {
-                    player.moveTransitionPercent = 0;
-                    player.moveTransitionDirection = movingDirection;
-                    player.inTransition = true;
-                }
-            }
-        }
-
-        // Interpolate if in transition
-        if (player.inTransition) {
-
-            const delta = player.stats.speed / this.settings.tickrate;
-            player.moveTransitionPercent += delta;
-            player.moveTransitionPercent = Math.min(player.moveTransitionPercent, 1);
-            player.position = this.getNextPosition(player.position, player.moveTransitionDirection, delta);
-
-            if (player.moveTransitionPercent === 1) {
-                player.inTransition = false;
-                player.position = player.position.round();
-            }
-        }
-    }
-
-    updateExplosions(time: number) {
-        for (let [i, explosion] of this.explosions.entries()) {
-            if (time >= explosion.timeCreated + explosion.duration * 1000) {
-                this.removeExplosion(explosion);
-            }
-        }
-    }
-
     updateCellState(time: number) {
         const { width, height } = this.settings.map.props;
         for (let y = 0; y < height; y++) {
@@ -522,6 +437,19 @@ export default class Match {
                         }
                     }
                 }
+                for (let bot of Object.values(this.bots)) {
+
+                    if (Position.equals(bot.position.round(), pos)) {
+                        // Check for explosion death
+                        if (cell.explosionsCells.length !== 0) {
+                            bot.isAlive = false;
+                        }
+                        for (let powerup of cell.powerups) {
+                            bot.stats[powerup.type.stat] += powerup.type.delta;
+                            this.removePowerup(powerup);
+                        }
+                    }
+                }
             }
         }
     }
@@ -530,10 +458,19 @@ export default class Match {
     mutate(time: number) {
         this.time = time;
         this.updateBombs(time);
-        this.updateExplosions(time);
+
+        for (let explosion of this.explosions) {
+            if (time >= explosion.timeCreated + explosion.duration * 1000) {
+                this.removeExplosion(explosion);
+            }
+        }
 
         for (let player of Object.values(this.players)) {
-            this.updatePlayerMovement(player);
+            player.tick(this, time);
+        }
+
+        for (let bot of Object.values(this.bots)) {
+            bot.tick(this, time);
         }
 
         this.updateCellState(time);

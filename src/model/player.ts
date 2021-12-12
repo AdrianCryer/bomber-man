@@ -1,24 +1,18 @@
+import shortUUID from "short-uuid";
 import Position from "../util/Position";
+import Match from "./match";
+import MovableActor from "./movable-actor";
 import { Direction, StatsConfig } from "./types";
 
-type PlayerConfig = {
-    initialPosition: Position;
-    stats: StatsConfig;
-};
+export default class Player extends MovableActor {
 
-export default class Player {
-    id: string;
-    position: Position;
-    movingDirection: Direction;
-    wantsToMove: boolean;
-    inTransition: boolean;
-    moveTransitionPercent: number;
-    moveTransitionDirection: Direction;
+    wantsToPlaceBomb: boolean;
     bombCount: number;
     stats: StatsConfig;
-    isAlive: boolean;
 
-    constructor(id: string, { initialPosition, stats }: PlayerConfig) {
+    constructor(id: string, initialPosition: Position, stats: StatsConfig) {
+
+        super(id, initialPosition, stats.speed);
         this.id = id;
         this.wantsToMove = false;
         this.inTransition = false;
@@ -28,8 +22,29 @@ export default class Player {
         this.bombCount = stats.bombCount;
     }
 
-    setMoving(direction: Direction) {
-        this.movingDirection = direction;
-        this.wantsToMove = true;
+    tick(match: Match, time: number) {
+        super.tick(match, time);
+
+        if (this.wantsToPlaceBomb) {
+            const position = this.position.round();
+            const bomb = {
+                id: shortUUID.generate(),
+                owner: this,
+                position,
+                explosionDuration: this.stats['explosionDuration'],
+                explosionRadius: this.stats['explosionRadius'],
+                timer: this.stats['bombTimer'],
+                isSliding: false,
+                power: 1,
+                slidingSpeed: 5,
+                timePlaced: match.time
+            };
+            match.bombs.push(bomb);
+            this.wantsToPlaceBomb = false;
+        }
+    }
+
+    placeBomb() {
+        this.wantsToPlaceBomb = true;
     }
 }

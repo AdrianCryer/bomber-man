@@ -3,6 +3,7 @@ import { Graphics } from '@pixi/graphics';
 import { Rectangle } from 'pixi.js';
 import { AbsoluteContainer } from "./absolute-container";
 import Button from './button';
+import { Size } from '../model/types';
 
 export type ModalOptions = {
     padding?: number;
@@ -13,8 +14,10 @@ export type ModalOptions = {
     confirmButtonText: string;
     cancelButtonText?: string;
     darkenBackground: boolean;
-    modalWidthRatio: number;
-    modalHeightRatio: number;
+    // modalWidthRatio: number;
+    // modalHeightRatio: number;
+    modalSizeRatio: Size;
+    buttonSizeRatio: Size;
     onConfirm: () => void;
     onCancel?: () => void; 
 };
@@ -78,11 +81,11 @@ export default class Modal extends AbsoluteContainer {
     }
 
     show() {
-        this.hidden = false;
+        this.visible = false;
     }
 
     hide() {
-        this.hidden = true;
+        this.visible = true;
     }
 
     drawTitle() {
@@ -96,10 +99,10 @@ export default class Modal extends AbsoluteContainer {
     }
 
     drawButtons() {
-        const width = this.getBounds().width * this.options.modalWidthRatio;
-        const height = this.getBounds().height * this.options.modalHeightRatio;
-        const BUTTON_WIDTH = 0.2;
-        const BUTTON_HEIGHT = 0.2;
+        const width = this.getBounds().width * this.options.modalSizeRatio.width;
+        const height = this.getBounds().height * this.options.modalSizeRatio.height;
+        const BUTTON_WIDTH = this.options.buttonSizeRatio.width;
+        const BUTTON_HEIGHT = this.options.buttonSizeRatio.height;
 
         const buttonAnchor = new Rectangle(
             this.modalBounds.x + width * (0.5 - BUTTON_WIDTH / 2),
@@ -132,8 +135,8 @@ export default class Modal extends AbsoluteContainer {
 
     draw() {
 
-        const width = this.getBounds().width * this.options.modalWidthRatio;
-        const height = this.getBounds().height * this.options.modalHeightRatio;
+        const width = this.getBounds().width * this.options.modalSizeRatio.width;
+        const height = this.getBounds().height * this.options.modalSizeRatio.height;
 
         this.window
             .clear()

@@ -1,7 +1,9 @@
 import * as PIXI from "pixi.js";
+import Bot from "../model/bot";
+import Entity from "../model/entity";
 import { CellType } from "../model/game-map";
 import Match, { Explosion } from "../model/match";
-import MovableActor from "../model/movable-actor";
+import Player from "../model/player";
 import { AbsoluteContainer } from "./absolute-container";
 
 export type GameRenderable<T, S extends PIXI.Container> = T & { graphic?: S, addedToCanvas: boolean };
@@ -179,7 +181,7 @@ export default class MatchGrid extends AbsoluteContainer {
             graphics.delete(id);
         }
 
-        // Handle explosions
+        // Handle new explosions
         for (let explosion of match.explosions) {
             this.drawExplosion(explosion, graphics);
         }
@@ -234,7 +236,10 @@ export default class MatchGrid extends AbsoluteContainer {
         }
     }
 
-    drawActor(actor: MovableActor, check: Set<string>) {
+    drawActor(actor: Player, check: Set<string>) {
+        if (actor instanceof Bot) {
+            console.log(actor);
+        }
         const id = actor.id;
         if (!(id in this.graphics)) {
             const graphic = new PIXI.Graphics();

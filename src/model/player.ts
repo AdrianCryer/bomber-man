@@ -1,31 +1,31 @@
 import shortUUID from "short-uuid";
 import Position from "../util/Position";
+import { Movement } from "./behaviours/movement";
+import Entity from "./entity";
 import Match from "./match";
-import MovableActor from "./movable-actor";
 import { Direction, StatsConfig } from "./types";
 
-export default class Player extends MovableActor {
 
-    wantsToPlaceBomb: boolean;
+export default class Player extends Entity {
+
+    isAlive: boolean;
+    shouldPlaceBomb: boolean;
     bombCount: number;
     stats: StatsConfig;
 
     constructor(id: string, initialPosition: Position, stats: StatsConfig) {
-
-        super(id, initialPosition, stats.speed);
-        this.id = id;
-        this.wantsToMove = false;
-        this.inTransition = false;
-        this.moveTransitionPercent = 0;
-        this.position = initialPosition.clone();
+        super(id, initialPosition.clone());
         this.stats = stats;
-        this.bombCount = stats.bombCount;
+        this.isAlive = true;
+        this.bombCount = 0;
+        this.addBehaviour(new Movement(stats.speed));
     }
 
-    tick(match: Match, time: number) {
-        super.tick(match, time);
+    onUpdate(match: Match, time: number) {
 
-        if (this.wantsToPlaceBomb) {
+        this.getBehaviour(Movement).onUpdate(this, match, time);
+
+        if (this.shouldPlaceBomb) {
             const position = this.position.round();
             const bomb = {
                 id: shortUUID.generate(),
@@ -40,11 +40,19 @@ export default class Player extends MovableActor {
                 timePlaced: match.time
             };
             match.bombs.push(bomb);
-            this.wantsToPlaceBomb = false;
+            this.shouldPlaceBomb = false;
         }
     }
 
+    setMoving(direction: Direction) {
+        this.getBehaviour(Movement).setMoving(direction);
+    }
+
+    stopMoving(direction: Direction) {
+        this.getBehaviour(Movement).stopMoving(direction);
+    }
+
     placeBomb() {
-        this.wantsToPlaceBomb = true;
+        this.shouldPlaceBomb = true;
     }
 }

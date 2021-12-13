@@ -1,8 +1,8 @@
 import shortUUID from "short-uuid";
 import Position from "../util/Position";
 import Bot from "./bot";
+import Entity, { Behaviour, BehaviourClass } from "./entity";
 import GameMap, { CellType } from "./game-map";
-import MovableActor from "./movable-actor";
 import Player from "./player";
 import { Direction, PowerUpType, StatsConfig, StatType } from "./types";
 
@@ -103,6 +103,7 @@ export default class Match {
 
     /** Number of elapsed ticks */
     time: number;
+    entitities: Record<string, Entity>;
 
     constructor(settings: MatchSettings, playerIds: string[]) {
         this.settings = settings;
@@ -228,6 +229,34 @@ export default class Match {
         }
         return nextPos;
     }
+
+    getEntitiesWithBehaviour<B extends Behaviour>(cls: BehaviourClass<B>): Entity[] {
+        let entities = [];
+        for (let entity of Object.values(this.entitities)) {
+            if (entity.hasComponent(cls)) {
+                entities.push(entity);
+            }
+        }
+        return [];
+    }
+
+    getEntitiesWithBehaviourAtPosition<B extends Behaviour>(cls: BehaviourClass<B>, position: Position): Entity[] {
+        let entities = [];
+        for (let entity of Object.values(this.entitities)) {
+            if (entity.hasComponent(cls)) {
+                entities.push(entity);
+            }
+        }
+        return [];
+    }
+
+    // getEntitiesOfType<E extends Entity>(cls: Class<E>): Entity[] {
+    //     return [];
+    // }
+
+    // removeEntity() {
+    //     // this.
+    // }
 
     getBombsInPosition(position: Position): Bomb[] {
         let bombs: Bomb[] = [];
@@ -466,11 +495,11 @@ export default class Match {
         }
 
         for (let player of Object.values(this.players)) {
-            player.tick(this, time);
+            player.onUpdate(this, time);
         }
 
         for (let bot of Object.values(this.bots)) {
-            bot.tick(this, time);
+            bot.onUpdate(this, time);
         }
 
         this.updateCellState(time);

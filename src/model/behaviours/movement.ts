@@ -1,6 +1,6 @@
 import Match from "../match";
 import { Direction } from "../types";
-import Entity, { Behaviour } from "../entity";
+import Entity, { Behaviour } from "../entities/entity";
 
 
 export class Movement implements Behaviour {

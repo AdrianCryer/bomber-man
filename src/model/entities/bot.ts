@@ -1,8 +1,8 @@
-import Position from "../util/Position";
-import { Movement } from "./behaviours/movement";
-import Match from "./match";
+import Position from "../../util/Position";
+import { Movement } from "../behaviours/movement";
+import Match from "../match";
 import Player from "./player";
-import { Direction } from "./types";
+import { Direction } from "../types";
 
 
 export default class Bot extends Player {

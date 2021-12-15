@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import Player from "../model/player";
+import Player from "../model/entities/player";
 import { StatsConfig, Size, StatType } from "../model/types";
 import { AbsoluteContainer } from "./absolute-container";
 import { Resources } from "./match-grid";

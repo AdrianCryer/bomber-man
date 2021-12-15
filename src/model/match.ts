@@ -1,9 +1,9 @@
 import shortUUID from "short-uuid";
 import Position from "../util/Position";
-import Bot from "./bot";
-import Entity, { Behaviour, BehaviourClass } from "./entity";
+import Bot from "./entities/bot";
+import Entity, { Behaviour, BehaviourClass } from "./entities/entity";
 import GameMap, { CellType } from "./game-map";
-import Player from "./player";
+import Player from "./entities/player";
 import { Direction, PowerUpType, StatsConfig, StatType } from "./types";
 
 export type MatchSettings = {
@@ -95,11 +95,11 @@ export default class Match {
     settings: MatchSettings;
     playerIds: string[];
     grid: GridCell[][];
-    players: Record<string, Player>;
     bombs: Bomb[];
     powerups: PowerUp[];
     explosions: Explosion[];
-    bots: Record<string, Bot>;
+    players: Set<string>;
+    bots: Set<string>;
 
     /** Number of elapsed ticks */
     time: number;
@@ -113,8 +113,9 @@ export default class Match {
         this.explosions = [];
         this.powerups = [];
 
-        this.players = {};
-        this.bots = {};
+        this.entitities = {};
+        this.players = new Set();
+        this.bots = new Set();
 
         this.setup();
     }
@@ -166,7 +167,8 @@ export default class Match {
 
         // Add human player
         for (let [i, playerId] of this.playerIds.entries()) {
-            this.players[playerId] = new Player(
+            this.players.add(playerId);
+            this.entitities[playerId] = new Player(
                 playerId,
                 startingPositions[i],
                 Object.assign({}, this.settings.detaultStats)
@@ -176,16 +178,28 @@ export default class Match {
         // Add bots
         for (let i = 0; i < this.settings.bots; i++) {
             const id = shortUUID.generate();
-            this.bots[id] = new Bot(
+            this.bots.add(id);
+            this.entitities[id] = new Bot(
                 id,
                 startingPositions[numPlayers + i].clone(),
                 Object.assign({}, this.settings.detaultStats)
             );
         }
+    }
 
-        for (let player of Object.values(this.players)) {
-            player.isAlive = true;
+    getPlayer(playerId: string) {
+        if (!this.players.has(playerId)) {
+            throw new Error("Invalid player");
         }
+        return this.entitities[playerId] as Player;
+    }
+
+    getPlayers(): Player[] {
+        let players = [];
+        for (let id of this.players.values()) {
+            players.push(this.getPlayer(id));
+        }
+        return players;
     }
 
     createCell(type: CellType, last?: GridCell): GridCell {
@@ -209,7 +223,7 @@ export default class Match {
     positionIsBlocked(position: Position): boolean {
         const type = this.grid[position.y][position.x].type;
         return type === CellType.SOLID || type === CellType.BRICK;
-    }
+    } 
 
     positionIsTraversable(position: Position): boolean {
         return !this.positionIsBlocked(position) &&
@@ -494,8 +508,8 @@ export default class Match {
             }
         }
 
-        for (let player of Object.values(this.players)) {
-            player.onUpdate(this, time);
+        for (let entity of Object.values(this.entitities)) {
+            entity.onUpdate(this, time);
         }
 
         for (let bot of Object.values(this.bots)) {

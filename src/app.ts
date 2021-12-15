@@ -96,7 +96,7 @@ export default class App {
                     this.model.mutate(timeNow);
                     this.socket.emit("update_match", this.model.currentMatch);
 
-                    const player = this.model.currentMatch.players[THIS_PLAYER_ID];
+                    const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
                     if (!player.isAlive) {
                         this.model.endCurrentMatch();
                         this.socket.emit("match_over");
@@ -108,16 +108,17 @@ export default class App {
         });
         this.socket.on("place_bomb", () => {
             if (this.model.inMatch) {
-                const player = this.model.currentMatch.players[THIS_PLAYER_ID];
+                const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
                 player.placeBomb();
             }
         });
         this.socket.on("set_moving", (direction: Direction) => {
-            const player = this.model.currentMatch.players[THIS_PLAYER_ID];
+            const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
+            console.log(player);
             player.setMoving(direction);
         });
         this.socket.on("stop_moving", (direction: Direction) => {
-            const player = this.model.currentMatch.players[THIS_PLAYER_ID];
+            const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
             player.stopMoving(direction);
         });
     }

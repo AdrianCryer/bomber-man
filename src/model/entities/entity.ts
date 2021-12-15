@@ -1,7 +1,6 @@
-import Position from "../util/Position";
-import Match from "./match";
+import Position from "../../util/Position";
+import Match from "../match";
 
-// export type Class<T> = { new(...args: unknown[]): T };
 
 export interface Behaviour {
     onUpdate: (entity: Entity, match: Match, time: number) => void;
@@ -9,17 +8,12 @@ export interface Behaviour {
 
 export interface BehaviourClass<T extends Behaviour> {
     readonly name: string;
-    readonly tag?: string;
     new (...args: unknown[]): T;
   }
 
 export default abstract class Entity {
 
     readonly behaviours: { [tag: string]: Behaviour; } = {};
-    private readonly behaviourClasses: {
-        [tag: string]: BehaviourClass<Behaviour>;
-    } = {};
-
     id: string;
     position: Position;
 

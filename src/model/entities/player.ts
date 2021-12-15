@@ -1,9 +1,9 @@
 import shortUUID from "short-uuid";
-import Position from "../util/Position";
-import { Movement } from "./behaviours/movement";
+import Position from "../../util/Position";
+import { Movement } from "../behaviours/movement";
 import Entity from "./entity";
-import Match from "./match";
-import { Direction, StatsConfig } from "./types";
+import Match from "../match";
+import { Direction, StatsConfig } from "../types";
 
 
 export default class Player extends Entity {
@@ -18,6 +18,7 @@ export default class Player extends Entity {
         this.stats = stats;
         this.isAlive = true;
         this.bombCount = 0;
+        this.shouldPlaceBomb = false;
         this.addBehaviour(new Movement(stats.speed));
     }
 

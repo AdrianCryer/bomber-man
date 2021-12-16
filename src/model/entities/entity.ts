@@ -9,7 +9,7 @@ export interface Behaviour {
 export interface BehaviourClass<T extends Behaviour> {
     readonly name: string;
     new (...args: unknown[]): T;
-  }
+}
 
 export default abstract class Entity {
 

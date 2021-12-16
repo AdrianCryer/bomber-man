@@ -264,13 +264,14 @@ export default class Match {
         return [];
     }
 
-    // getEntitiesOfType<E extends Entity>(cls: Class<E>): Entity[] {
-    //     return [];
-    // }
+    removeEntity(entity: Entity) {
+        const id = entity.id;
+        delete this.entitities[id];
+    }
 
-    // removeEntity() {
-    //     // this.
-    // }
+    createEntity(entity: Entity) {
+        this.entitities[entity.id] = entity;
+    }
 
     getBombsInPosition(position: Position): Bomb[] {
         let bombs: Bomb[] = [];
@@ -425,40 +426,6 @@ export default class Match {
         currentCell.powerups.splice(i, 1);
     }
 
-    updateBombs(time: number) {
-        for (let [i, bomb] of this.bombs.entries()) {
-
-            const { slidingDirection } = bomb;
-
-            const shouldExplode = (time >= bomb.timePlaced + bomb.timer * 1000);
-            if (bomb.isSliding) {
-                const delta = bomb.slidingSpeed / this.settings.tickrate;
-
-                bomb.position = this.getNextPosition(bomb.position, slidingDirection, delta);
-                const closest = bomb.position.round();
-                const next = this.getNextPosition(closest, slidingDirection);
-
-                if (shouldExplode ||
-                    (closest.x !== bomb.position.x || closest.y !== bomb.position.y) &&
-                    !this.positionIsTraversable(next)) {
-
-                    // Force to next cell
-                    if (Math.abs(bomb.position.x - closest.x) <= delta &&
-                        Math.abs(bomb.position.y - closest.y) <= delta) {
-
-                        bomb.isSliding = false;
-                        bomb.position = closest;
-                    }
-                }
-            }
-
-            if (shouldExplode && !bomb.isSliding) {
-                this.createExplosion(bomb, time);
-                this.removeBomb(bomb);
-            }
-        }
-    }
-
     updateCellState(time: number) {
         const { width, height } = this.settings.map.props;
         for (let y = 0; y < height; y++) {
@@ -500,20 +467,16 @@ export default class Match {
     // Fixed update
     mutate(time: number) {
         this.time = time;
-        this.updateBombs(time);
+        // this.updateBombs(time);
 
-        for (let explosion of this.explosions) {
-            if (time >= explosion.timeCreated + explosion.duration * 1000) {
-                this.removeExplosion(explosion);
-            }
-        }
+        // for (let explosion of this.explosions) {
+        //     if (time >= explosion.timeCreated + explosion.duration * 1000) {
+        //         this.removeExplosion(explosion);
+        //     }
+        // }
 
         for (let entity of Object.values(this.entitities)) {
             entity.onUpdate(this, time);
-        }
-
-        for (let bot of Object.values(this.bots)) {
-            bot.onUpdate(this, time);
         }
 
         this.updateCellState(time);

@@ -4,6 +4,7 @@ import { Movement } from "../behaviours/movement";
 import Entity from "./entity";
 import Match from "../match";
 import { Direction, StatsConfig } from "../types";
+import Bomb from "./bomb";
 
 
 export default class Player extends Entity {
@@ -28,19 +29,19 @@ export default class Player extends Entity {
 
         if (this.shouldPlaceBomb) {
             const position = this.position.round();
-            const bomb = {
-                id: shortUUID.generate(),
-                owner: this,
+            match.createEntity(new Bomb(
+                shortUUID.generate(),
                 position,
-                explosionDuration: this.stats['explosionDuration'],
-                explosionRadius: this.stats['explosionRadius'],
-                timer: this.stats['bombTimer'],
-                isSliding: false,
-                power: 1,
-                slidingSpeed: 5,
-                timePlaced: match.time
-            };
-            match.bombs.push(bomb);
+                {
+                    owner: this,
+                    explosionDuration: this.stats['explosionDuration'],
+                    explosionRadius: this.stats['explosionRadius'],
+                    timer: this.stats['bombTimer'],
+                    power: 1,
+                    slidingSpeed: 5,
+                    timePlaced: match.time
+                }
+            ));
             this.shouldPlaceBomb = false;
         }
     }

@@ -114,7 +114,6 @@ export default class App {
         });
         this.socket.on("set_moving", (direction: Direction) => {
             const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
-            console.log(player);
             player.setMoving(direction);
         });
         this.socket.on("stop_moving", (direction: Direction) => {

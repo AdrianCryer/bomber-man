@@ -1,8 +1,10 @@
+import shortUUID from "short-uuid";
 import Position from "../../util/Position";
 import { Slidable } from "../behaviours/slidable";
 import match from "../match";
 import { Direction } from "../types";
 import Entity from "./entity";
+import Explosion from "./explosion";
 import Player from "./player";
 
 
@@ -20,16 +22,33 @@ export default class Bomb extends Entity {
     
     isSliding: boolean;
     slidingDirection?: Direction;
-    bombConfig: BombConfig;
+    config: BombConfig;
 
-    constructor(id: string, position: Position, bombConfig: BombConfig) {
+    constructor(id: string, position: Position, config: BombConfig) {
         super(id, position);
-        this.bombConfig = bombConfig;
+        this.config = config;
         this.isSliding = false;
-        this.addBehaviour(new Slidable(bombConfig.slidingSpeed));
+        this.addBehaviour(new Slidable(config.slidingSpeed));
     }
 
     onUpdate(match: match, time: number): void {
-        this.getBehaviour(Slidable).onUpdate(this, match, time);
+
+        if (!(time >= this.config.timePlaced + this.config.timer * 1000)) {
+            this.getBehaviour(Slidable).onUpdate(this, match, time);
+        } else {
+            const explosion = new Explosion(
+                shortUUID.generate(),
+                this.position.round(),
+                {
+                    intensity: this.config.power,
+                    duration: this.config.explosionDuration,
+                    radius: this.config.explosionRadius,
+                    timeCreated: match.time
+                }
+            );
+            explosion.calculateExplosionCells(match);
+            match.createEntity(explosion);
+            match.removeEntity(this);
+        }
     }
 }

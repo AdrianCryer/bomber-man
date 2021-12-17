@@ -5,33 +5,38 @@ import Entity from "./entity";
 import Match from "../match";
 import { Direction, StatsConfig } from "../types";
 import Bomb from "./bomb";
+import Damagable from "../behaviours/damagable";
+import Powerup from "./powerup";
 
 
 export default class Player extends Entity {
 
-    isAlive: boolean;
     shouldPlaceBomb: boolean;
     bombCount: number;
     stats: StatsConfig;
 
     constructor(id: string, initialPosition: Position, stats: StatsConfig) {
-        super(id, initialPosition.clone());
+        super(id, initialPosition.clone(), false);
         this.stats = stats;
-        this.isAlive = true;
         this.bombCount = 0;
         this.shouldPlaceBomb = false;
         this.addBehaviour(new Movement(stats.speed));
+        this.addBehaviour(new Damagable(100, false));
     }
 
     onUpdate(match: Match, time: number) {
 
+        if (!this.isAlive()) {
+            return;
+        }
+
         this.getBehaviour(Movement).onUpdate(this, match, time);
+        this.getBehaviour(Damagable).onUpdate(this, match, time);
 
         if (this.shouldPlaceBomb) {
-            const position = this.position.round();
             match.createEntity(new Bomb(
                 shortUUID.generate(),
-                position,
+                this.position.round(),
                 {
                     owner: this,
                     explosionDuration: this.stats['explosionDuration'],
@@ -43,6 +48,18 @@ export default class Player extends Entity {
                 }
             ));
             this.shouldPlaceBomb = false;
+        }
+
+        const position = this.position.round();
+        for (let entity of match.getEntitiesAtPosition(position)) {
+            if (entity instanceof Powerup) {
+                const powerup = entity.type;
+                this.stats[powerup.stat] += powerup.delta;
+                if (powerup.stat === 'speed') {
+                    this.getBehaviour(Movement).speed += powerup.delta;
+                }
+                match.removeEntity(entity);
+            }
         }
     }
 
@@ -56,5 +73,9 @@ export default class Player extends Entity {
 
     placeBomb() {
         this.shouldPlaceBomb = true;
+    }
+
+    isAlive() {
+        return !this.getBehaviour(Damagable).isDead();
     }
 }

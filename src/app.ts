@@ -97,7 +97,7 @@ export default class App {
                     this.socket.emit("update_match", this.model.currentMatch);
 
                     const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
-                    if (!player.isAlive) {
+                    if (!player.isAlive()) {
                         this.model.endCurrentMatch();
                         this.socket.emit("match_over");
                         this.ticker.stop();

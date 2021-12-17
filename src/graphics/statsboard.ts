@@ -94,7 +94,7 @@ export default class StatsBoard extends AbsoluteContainer {
             } 
             
             const rowGraphic = this.playerRowGraphics[id];
-            if (!player.isAlive && !rowGraphic.renderedDead) {
+            if (!player.isAlive() && !rowGraphic.renderedDead) {
                 this.updatePlayerDead(player);
             }
             const titleText = rowGraphic.titleText;
@@ -102,7 +102,7 @@ export default class StatsBoard extends AbsoluteContainer {
             titleText.position.set(1.5 * this.padding + rowHeight, yOffset);
 
             let titleIcon = this.playerRowGraphics[id].titleIcon;
-            if (player.isAlive) {
+            if (player.isAlive()) {
                 (<PIXI.Graphics> titleIcon)
                     .clear()
                     .beginFill(0xEA4C46)
@@ -135,7 +135,7 @@ export default class StatsBoard extends AbsoluteContainer {
     updatePlayerRowGraphic(player: Player, position: number) {
         const rowHeight = this.bounds.width * PLAYER_ROW_HEIGHT_RATIO;
 
-        if (player.isAlive) {
+        if (player.isAlive()) {
             const titleText =  new PIXI.Text("Player " + (position + 1), {
                 fontFamily: "oldschool",
                 fontStyle: "normal",

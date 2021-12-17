@@ -1,11 +1,14 @@
 import shortUUID from "short-uuid";
 import Position from "../../util/Position";
+import Damagable from "../behaviours/damagable";
 import { Slidable } from "../behaviours/slidable";
 import { CellType } from "../game-map";
 import Match from "../match";
 import { Direction } from "../types";
 import { BombConfig } from "./bomb";
+import Brick from "./brick";
 import Entity from "./entity";
+import Powerup from "./powerup";
 
 export type ExplosionCell = {
     id: string;
@@ -27,11 +30,13 @@ export default class Explosion extends Entity {
     
     config: ExplosionConfig;
     cells: ExplosionCell[];
+    affectedEntities: Set<string>;
 
     constructor(id: string, position: Position, config: ExplosionConfig) {
-        super(id, position);
+        super(id, position, false);
         this.config = config;
         this.cells = [];
+        this.affectedEntities = new Set();
     }
 
     calculateExplosionCells(match: Match) {
@@ -69,8 +74,12 @@ export default class Explosion extends Entity {
                     isStopping = true;
                 }
             } 
-            if (match.getCell(position).type === CellType.BRICK) {
-                isStopping = true;
+
+            for (let entity of match.getEntitiesAtPosition(position)) {
+                if (entity instanceof Brick) {
+                    isStopping = true;
+                    break;
+                }
             }
 
             if (isStopping) {
@@ -93,18 +102,16 @@ export default class Explosion extends Entity {
     onUpdate(match: Match, time: number): void {
 
         if (time < this.config.timeCreated + this.config.duration * 1000) {
-            // for (let entity of match.getEntitiesWithBehaviourAtPosition(Damagable, this.position)) {
-
-            // }
+            for (let cell of this.cells) {
+                for (let entity of match.getEntitiesWithBehaviourAtPosition(Damagable, cell.position)) {
+                    if (!this.affectedEntities.has(entity.id)) {
+                        entity.getBehaviour(Damagable).modifyHealth(-100, this);
+                        this.affectedEntities.add(entity.id);
+                    }
+                }
+            }
         } else {
             match.removeEntity(this);
         }
-
-        // for (let entity of match.get)
-
-        // const shouldExplode = (time >= this.config.timePlaced + this.config.timer * 1000);
-        // if (!shouldExplode) {
-        //     this.getBehaviour(Slidable).onUpdate(this, match, time);
-        // }
     }
 }

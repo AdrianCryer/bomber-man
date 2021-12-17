@@ -14,14 +14,24 @@ export interface BehaviourClass<T extends Behaviour> {
 export default abstract class Entity {
 
     readonly behaviours: { [tag: string]: Behaviour; } = {};
-    id: string;
+    readonly id: string;
     position: Position;
+    isCollidable: boolean;
 
-    constructor(id: string, position: Position) {
+    constructor(id: string, position: Position, isCollidable: boolean) {
         this.id = id;
         this.position = position;
+        this.isCollidable = isCollidable;
     }
 
+    /**
+     * Method to be preformed on a gamestate update.
+     * 
+     * @param match The match to update
+     * @param time The current game time
+     * @returns List of entity strings that have been modified since the last 
+     *          game state.
+     */
     abstract onUpdate(match: Match, time: number): void;
 
     hasComponent<B extends Behaviour>(cls: BehaviourClass<B>): boolean {

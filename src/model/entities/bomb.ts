@@ -20,20 +20,17 @@ export type BombConfig = {
 
 export default class Bomb extends Entity {
     
-    isSliding: boolean;
-    slidingDirection?: Direction;
     config: BombConfig;
 
     constructor(id: string, position: Position, config: BombConfig) {
-        super(id, position);
+        super(id, position, true);
         this.config = config;
-        this.isSliding = false;
         this.addBehaviour(new Slidable(config.slidingSpeed));
     }
 
     onUpdate(match: match, time: number): void {
 
-        if (!(time >= this.config.timePlaced + this.config.timer * 1000)) {
+        if (time < this.config.timePlaced + this.config.timer * 1000) {
             this.getBehaviour(Slidable).onUpdate(this, match, time);
         } else {
             const explosion = new Explosion(

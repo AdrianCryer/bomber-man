@@ -1,11 +1,10 @@
 import Match from "../match";
 import { Direction } from "../types";
 import Entity, { Behaviour } from "../entities/entity";
+import { Slidable } from "./slidable";
 
 
 export class Movement implements Behaviour {
-
-    static readonly tag = "movable";
 
     movingDirection: Direction;
     wantsToMove: boolean;
@@ -30,20 +29,20 @@ export class Movement implements Behaviour {
             if (!match.positionIsBlocked(nextPos)) {
 
                 let canMove = true;
-                const bombs = match.getBombsInPosition(nextPos);
-                // slidableEntities = getEntitiesWithBehaviour(IBehaviour)
-                // Position contains bomb: can only move if can slide bomb
+                const slidableEntities = match.getEntitiesWithBehaviourAtPosition(Slidable, nextPos);
 
-                if (bombs.length > 0) {
-                    const bombNextPos = match.getNextPosition(nextPos, this.movingDirection);
-                    canMove = match.positionIsTraversable(bombNextPos);
+                if (slidableEntities.length > 0) {
+                    const entityNextPos = match.getNextPosition(nextPos, this.movingDirection);
+                    canMove = match.positionIsTraversable(entityNextPos);
 
                     if (canMove) {
-                        for (let bomb of bombs) {
-                            bomb.isSliding = true;
-                            bomb.slidingDirection = this.movingDirection;
+                        for (let entity of slidableEntities) {
+                            entity.getBehaviour(Slidable).isSliding = true;
+                            entity.getBehaviour(Slidable).slidingDirection = this.movingDirection;
                         }
                     }
+                } else {
+                    canMove = match.positionIsTraversable(nextPos);
                 }
 
                 if (canMove) {
@@ -55,6 +54,7 @@ export class Movement implements Behaviour {
         }
 
         if (this.inTransition) {
+            const lastPosition = entity.position.clone();
             const delta = this.speed / match.settings.tickrate;
             this.moveTransitionPercent += delta;
             this.moveTransitionPercent = Math.min(this.moveTransitionPercent, 1);
@@ -64,6 +64,7 @@ export class Movement implements Behaviour {
                 this.inTransition = false;
                 entity.position = entity.position.round();
             }
+            match.updateEntityPosition(entity, lastPosition);
         }
     }
 
@@ -78,25 +79,3 @@ export class Movement implements Behaviour {
         }
     }
 }
-
-// class Player extends Entity {
-    
-//     constructor() {
-//         super();
-//         this.behaviours = [
-//             new Movable(),
-//             // new PlaceBombs(),
-//             // new Killable()
-//         ]
-//     }
-
-//     onUpdate(match: Match, time: number): void {
-//         for (let behaviour of this.behaviours) {
-//             behaviour.onUpdate(this, match, time);
-//         }
-//     }
-// }
-
-// const player = new Player();
-// console.log(player.getBehaviour(Movable))
-// player.getBehaviour(Movable).setMoving(Direction.UP);

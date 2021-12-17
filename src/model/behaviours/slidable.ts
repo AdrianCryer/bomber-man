@@ -21,7 +21,7 @@ export class Slidable implements Behaviour {
         }
 
         const delta = this.slidingSpeed / match.settings.tickrate;
-
+        const lastPosition = entity.position.clone();
         entity.position = match.getNextPosition(entity.position, this.slidingDirection, delta);
         const closest = entity.position.round();
         const next = match.getNextPosition(closest, this.slidingDirection);
@@ -37,5 +37,6 @@ export class Slidable implements Behaviour {
                 entity.position = closest;
             }
         }
+        match.updateEntityPosition(entity, lastPosition);
     }
 }

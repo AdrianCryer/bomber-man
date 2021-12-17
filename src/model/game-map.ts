@@ -6,7 +6,6 @@ export type MapProperties = {
 };
 
 export enum CellType {
-    BRICK = "BRICK",
     SPAWN = "SPAWN",
     OPEN = "OPEN",
     SOLID = "SOLID"

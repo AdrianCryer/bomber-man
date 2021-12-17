@@ -94,7 +94,7 @@ export default class GameView {
             ));
         }
         this.grid.mutate(match);
-        this.statusBoard.mutate(Object.values(match.players));
+        this.statusBoard.mutate(match.getPlayers());
     }
 
     setupGameOverModal() {

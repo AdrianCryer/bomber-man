@@ -1,8 +1,8 @@
-import Position from "../util/Position";
-import Match from "./match";
-import MovableActor from "./movable-actor";
+import Position from "../../util/Position";
+import { Movement } from "../behaviours/movement";
+import Match from "../match";
 import Player from "./player";
-import { Direction } from "./types";
+import { Direction } from "../types";
 
 
 export default class Bot extends Player {
@@ -10,16 +10,18 @@ export default class Bot extends Player {
     private strollDelay: number = 200;
     private lastMove: number = 0;
 
-    tick(match: Match, time: number)  {
+    onUpdate(match: Match, time: number)  {
 
-        super.tick(match, time);
+        const movement = this.getBehaviour(Movement);
 
-        if (!this.inTransition && time >= this.lastMove + this.strollDelay) {
+        if (!movement.inTransition && time >= this.lastMove + this.strollDelay) {
             this.lastMove = time;  
             let nextDirection = Math.floor(Math.random() * 4) as Direction;
             this.setMoving(nextDirection);
 
         }
+
+        super.onUpdate(match, time);
     }
 
     findNearestBrick() {

@@ -1,10 +1,13 @@
 import shortUUID from "short-uuid";
 import Position from "../util/Position";
-import Bot from "./bot";
+import Bot from "./entities/bot";
+import Entity, { Behaviour, BehaviourClass } from "./entities/entity";
 import GameMap, { CellType } from "./game-map";
-import MovableActor from "./movable-actor";
-import Player from "./player";
+import Player from "./entities/player";
 import { Direction, PowerUpType, StatsConfig, StatType } from "./types";
+import Explosion from "./entities/explosion";
+import { Slidable } from "./behaviours/slidable";
+import Brick from "./entities/brick";
 
 export type MatchSettings = {
 
@@ -41,65 +44,46 @@ export type MatchSettings = {
     powerupRarityStepFunction: (maxRarity: number, val: number) => number;
 };
 
-export type PlayerConfig = {
-    position: Position;
-    stats: StatsConfig;
-};
+// export type PlayerConfig = {
+//     position: Position;
+//     stats: StatsConfig;
+// };
 
-export type Bomb = {
-    id: string;
-    owner: Player;
-    power: number;
-    timePlaced: number;
-    timer: number;
-    explosionRadius: number;
-    explosionDuration: number;
-    position: Position;
-    isSliding: boolean;
-    slidingSpeed: number;
-    slidingDirection?: Direction;
-};
+// export type Bomb = {
+//     id: string;
+//     owner: Player;
+//     power: number;
+//     timePlaced: number;
+//     timer: number;
+//     explosionRadius: number;
+//     explosionDuration: number;
+//     position: Position;
+//     isSliding: boolean;
+//     slidingSpeed: number;
+//     slidingDirection?: Direction;
+// };
 
-export type PowerUp = {
-    id: string;
-    position: Position;
-    type: PowerUpType;
-};
+// export type PowerUp = {
+//     id: string;
+//     position: Position;
+//     type: PowerUpType;
+// };
 
-export type ExplosionCell = {
-    id: string;
-    direction: Direction;
-    position: Position;
-    intensity: number;
-    isEnd: boolean;
-    isCentre: boolean;
-};
-
-export type Explosion = {
-    center: Position;
-    radius: number;
-    duration: number;
-    timeCreated: number;
-    cells: ExplosionCell[];
-};
 
 export type GridCell = {
     id: string;
     type: CellType;
-    explosionsCells: ExplosionCell[];
-    powerups: PowerUp[];
+    entities: Set<string>;
 };
 
 export default class Match {
 
+    entitities: Record<string, Entity>;
     settings: MatchSettings;
     playerIds: string[];
     grid: GridCell[][];
-    players: Record<string, Player>;
-    bombs: Bomb[];
-    powerups: PowerUp[];
-    explosions: Explosion[];
-    bots: Record<string, Bot>;
+    players: Set<string>;
+    bots: Set<string>;
 
     /** Number of elapsed ticks */
     time: number;
@@ -108,12 +92,9 @@ export default class Match {
         this.settings = settings;
         this.playerIds = playerIds;
         this.grid = [];
-        this.bombs = [];
-        this.explosions = [];
-        this.powerups = [];
-
-        this.players = {};
-        this.bots = {};
+        this.entitities = {};
+        this.players = new Set();
+        this.bots = new Set();
 
         this.setup();
     }
@@ -158,41 +139,55 @@ export default class Match {
                 }
                 if (this.grid[y][x].type === CellType.OPEN &&
                     Math.random() <= this.settings.brickSpawnChance) {
-                    this.grid[y][x] = this.createCell(CellType.BRICK);
+                    
+                    this.createEntity(new Brick(shortUUID.generate(), new Position(x, y)))
+                    // this.grid[y][x] = this.createCell(CellType.BRICK);
                 }
             }
         }
 
         // Add human player
         for (let [i, playerId] of this.playerIds.entries()) {
-            this.players[playerId] = new Player(
+            this.players.add(playerId);
+            this.createEntity(new Player(
                 playerId,
                 startingPositions[i],
                 Object.assign({}, this.settings.detaultStats)
-            );
+            ));
         }
 
         // Add bots
         for (let i = 0; i < this.settings.bots; i++) {
             const id = shortUUID.generate();
-            this.bots[id] = new Bot(
+            this.bots.add(id);
+            this.createEntity(new Bot(
                 id,
                 startingPositions[numPlayers + i].clone(),
                 Object.assign({}, this.settings.detaultStats)
-            );
-        }
-
-        for (let player of Object.values(this.players)) {
-            player.isAlive = true;
+            ));
         }
     }
 
-    createCell(type: CellType, last?: GridCell): GridCell {
+    getPlayer(playerId: string) {
+        if (!this.players.has(playerId)) {
+            throw new Error("Invalid player");
+        }
+        return this.entitities[playerId] as Player;
+    }
+
+    getPlayers(): Player[] {
+        let players = [];
+        for (let id of this.players.values()) {
+            players.push(this.getPlayer(id));
+        }
+        return players;
+    }
+
+    createCell(type: CellType): GridCell {
         return {
             id: shortUUID.generate(),
             type,
-            explosionsCells: last ? last.explosionsCells : [],
-            powerups: last ? last.powerups : []
+            entities: new Set()
         }
     }
 
@@ -206,13 +201,20 @@ export default class Match {
     }
 
     positionIsBlocked(position: Position): boolean {
-        const type = this.grid[position.y][position.x].type;
-        return type === CellType.SOLID || type === CellType.BRICK;
-    }
+        return this.grid[position.y][position.x].type === CellType.SOLID;
+    } 
 
     positionIsTraversable(position: Position): boolean {
-        return !this.positionIsBlocked(position) &&
-            this.getBombsInPosition(position).length == 0;
+        if (this.positionIsBlocked(position)) {
+            return false;
+        }
+        const { x,y } = position;
+        for (let entityId of this.grid[y][x].entities) {
+            if (this.entitities[entityId].isCollidable) {
+                return false;
+            }
+        }
+        return true;
     }
 
     getNextPosition(position: Position, direction: Direction, delta: number = 1): Position {
@@ -229,250 +231,61 @@ export default class Match {
         return nextPos;
     }
 
-    getBombsInPosition(position: Position): Bomb[] {
-        let bombs: Bomb[] = [];
-        for (let bomb of this.bombs) {
-            if (Position.equals(bomb.position.round(), position)) {
-                bombs.push(bomb);
+    getEntitiesWithBehaviour<B extends Behaviour>(cls: BehaviourClass<B>): Entity[] {
+        let result = [];
+        for (let entity of Object.values(this.entitities)) {
+            if (entity.hasComponent(cls)) {
+                result.push(entity);
             }
         }
-        return bombs;
+        return result;
     }
 
-    removeBomb(bomb: Bomb) {
-        let i = this.bombs.indexOf(bomb);
-        if (i !== - 1) {
-            this.bombs.splice(i, 1);
+    getEntitiesWithBehaviourAtPosition<B extends Behaviour>(cls: BehaviourClass<B>, position: Position): Entity[] {
+        const { x,y } = position;
+        let result = [];
+        for (let id of Array.from(this.grid[y][x].entities)) {
+            const entity = this.entitities[id];
+            if (entity.hasComponent(cls)) {
+                result.push(entity);
+            }
         }
+        return result;
     }
 
-    createExplosion(source: Bomb, time: number) {
-        const cells = this.calculateExplosionCells(source);
-        const explosion = {
-            center: source.position,
-            radius: source.explosionRadius,
-            duration: source.explosionDuration,
-            timeCreated: time,
-            cells
-        } as Explosion;
-
-        this.explosions.push(explosion);
-        for (let cell of cells) {
-            this.getCell(cell.position).explosionsCells.push(cell);
-        }
-        this.handleExplosion(explosion);
+    getEntitiesAtPosition(position: Position): Entity[] {
+        const { x,y } = position;
+        return Array.from(this.grid[y][x].entities).map(id => this.entitities[id]);
     }
 
-    calculateExplosionCells(source: Bomb): ExplosionCell[] {
+    updateEntityPosition(entity: Entity, lastPosition: Position) {
+        const { x,y } = lastPosition.round();
+        this.grid[y][x].entities.delete(entity.id);
 
-        const radius = source.explosionRadius;
-        let { x, y } = source.position;
-        let i = 0;
-        let stopped = Array(4).fill(false).slice();
-
-        let cells: ExplosionCell[] = [{
-            id: shortUUID.generate(),
-            intensity: source.power,
-            position: Object.assign({}, source.position),
-            isEnd: false,
-            isCentre: true,
-            direction: -1,
-        }];
-
-        const handleNextCell = (direction: Direction, position: Position) => {
-            if (stopped[direction]) {
-                return;
-            }
-            const cell = {
-                id: shortUUID.generate(),
-                direction,
-                position: position,
-                intensity: source.power,
-                isCentre: false,
-            };
-            let isStopping = (i === radius - 1);
-            if (i < radius - 1) {
-                const next = this.getNextPosition(position, direction);
-                if (!this.positionIsInBounds(next) || this.getCell(next).type === CellType.SOLID) {
-                    isStopping = true;
-                }
-            } 
-            if (this.getCell(position).type === CellType.BRICK) {
-                isStopping = true;
-            }
-
-            if (isStopping) {
-                stopped[direction] = true;
-            }
-            if (i !== 0) {
-                cells.push({ ...cell, isEnd: isStopping });
-            }
-        }
-
-        while (i < radius && !stopped.every(e => e == true)) {
-            handleNextCell(Direction.RIGHT, new Position(x + i, y));
-            handleNextCell(Direction.LEFT, new Position(x - i, y));
-            handleNextCell(Direction.DOWN, new Position(x,y + i));
-            handleNextCell(Direction.UP, new Position(x,y - i));
-            i++;
-        }
-
-        return cells;
+        const { x: nextX, y: nextY } =  entity.position.round();
+        this.grid[nextY][nextX].entities.add(entity.id);
     }
 
-    handleExplosion(explosion: Explosion) {
-        for (let explosionCell of explosion.cells) {
-            let pos = explosionCell.position;
+    removeEntity(entity: Entity) {
+        const { x, y } = entity.position.round();
+        this.grid[y][x].entities.delete(entity.id);
 
-            let cell = this.getCell(pos);
-            
-            // Destroy exploded powerups
-            for (let powerup of cell.powerups) {
-                this.removePowerup(powerup);
-            }
-            
-            if (cell.type === CellType.BRICK) {
-
-                // Try spawn power up at center 
-                if (Math.random() < this.settings.powerupSpawnChance) {
-                    this.createPowerup(pos);
-                }
-
-                this.grid[pos.y][pos.x] = this.createCell(CellType.OPEN, cell);
-            }
-        }
+        const id = entity.id;
+        delete this.entitities[id];
     }
 
-    removeExplosion(explosion: Explosion) {
-        let i = this.explosions.indexOf(explosion);
-        if (i !== - 1)
-            this.explosions.splice(i, 1);
-
-        for (let cell of explosion.cells) {
-            i = this.getCell(cell.position).explosionsCells.indexOf(cell);
-            if (i != -1) {
-                this.getCell(cell.position).explosionsCells.splice(i, 1);
-            }
-        }
-    }
-
-    createPowerup(position: Position) {
-        const maxRarity = Math.max(...this.settings.powerups.map(p => p.rarity));
-        const powerupTier = this.settings.powerupRarityStepFunction(maxRarity, Math.random());
-        const allPowerups = this.settings.powerups.filter(p => p.rarity === powerupTier);
-        console.log("SPAWNING TIER", powerupTier, maxRarity);
-
-        const powerup = {
-            id: shortUUID.generate(),
-            position,
-            type: allPowerups[Math.floor(Math.random() * allPowerups.length)],
-        } as PowerUp;
-
-        this.powerups.push(powerup);
-        this.getCell(position).powerups.push(powerup);
-    }
-
-    removePowerup(powerup: PowerUp) {
-        let currentCell = this.getCell(powerup.position);
-        let i = this.powerups.indexOf(powerup);
-        if (i !== -1) {
-            this.powerups.splice(i, 1);
-        }
-        i = currentCell.powerups.indexOf(powerup);
-        currentCell.powerups.splice(i, 1);
-    }
-
-    updateBombs(time: number) {
-        for (let [i, bomb] of this.bombs.entries()) {
-
-            const { slidingDirection } = bomb;
-
-            const shouldExplode = (time >= bomb.timePlaced + bomb.timer * 1000);
-            if (bomb.isSliding) {
-                const delta = bomb.slidingSpeed / this.settings.tickrate;
-
-                bomb.position = this.getNextPosition(bomb.position, slidingDirection, delta);
-                const closest = bomb.position.round();
-                const next = this.getNextPosition(closest, slidingDirection);
-
-                if (shouldExplode ||
-                    (closest.x !== bomb.position.x || closest.y !== bomb.position.y) &&
-                    !this.positionIsTraversable(next)) {
-
-                    // Force to next cell
-                    if (Math.abs(bomb.position.x - closest.x) <= delta &&
-                        Math.abs(bomb.position.y - closest.y) <= delta) {
-
-                        bomb.isSliding = false;
-                        bomb.position = closest;
-                    }
-                }
-            }
-
-            if (shouldExplode && !bomb.isSliding) {
-                this.createExplosion(bomb, time);
-                this.removeBomb(bomb);
-            }
-        }
-    }
-
-    updateCellState(time: number) {
-        const { width, height } = this.settings.map.props;
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-
-                const cell = this.grid[y][x];
-                const pos = new Position(x, y);
-                
-                for (let player of Object.values(this.players)) {
-
-                    if (Position.equals(player.position.round(), pos)) {
-                        // Check for explosion death
-                        if (cell.explosionsCells.length !== 0) {
-                            player.isAlive = false;
-                        }
-                        for (let powerup of cell.powerups) {
-                            player.stats[powerup.type.stat] += powerup.type.delta;
-                            this.removePowerup(powerup);
-                        }
-                    }
-                }
-                for (let bot of Object.values(this.bots)) {
-
-                    if (Position.equals(bot.position.round(), pos)) {
-                        // Check for explosion death
-                        if (cell.explosionsCells.length !== 0) {
-                            bot.isAlive = false;
-                        }
-                        for (let powerup of cell.powerups) {
-                            bot.stats[powerup.type.stat] += powerup.type.delta;
-                            this.removePowerup(powerup);
-                        }
-                    }
-                }
-            }
-        }
+    createEntity(entity: Entity) {
+        this.entitities[entity.id] = entity;
+        const { x, y } = entity.position.round();
+        this.grid[y][x].entities.add(entity.id);
     }
 
     // Fixed update
     mutate(time: number) {
         this.time = time;
-        this.updateBombs(time);
-
-        for (let explosion of this.explosions) {
-            if (time >= explosion.timeCreated + explosion.duration * 1000) {
-                this.removeExplosion(explosion);
-            }
+ 
+        for (let entity of Object.values(this.entitities)) {
+            entity.onUpdate(this, time);
         }
-
-        for (let player of Object.values(this.players)) {
-            player.tick(this, time);
-        }
-
-        for (let bot of Object.values(this.bots)) {
-            bot.tick(this, time);
-        }
-
-        this.updateCellState(time);
     }
 }

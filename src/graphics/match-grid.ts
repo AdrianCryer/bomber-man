@@ -1,8 +1,15 @@
 import * as PIXI from "pixi.js";
+import Bot from "../model/entities/bot";
+import Entity from "../model/entities/entity";
 import { CellType } from "../model/game-map";
-import Match, { Explosion } from "../model/match";
-import MovableActor from "../model/movable-actor";
+import Match from "../model/match";
+import Player from "../model/entities/player";
 import { AbsoluteContainer } from "./absolute-container";
+import Bomb from "../model/entities/bomb";
+import Explosion from "../model/entities/explosion";
+import Powerup from "../model/entities/powerup";
+import Position from "../util/Position";
+import Brick from "../model/entities/brick";
 
 export type GameRenderable<T, S extends PIXI.Container> = T & { graphic?: S, addedToCanvas: boolean };
 export type Resources = PIXI.utils.Dict<PIXI.LoaderResource>;
@@ -76,6 +83,7 @@ export default class MatchGrid extends AbsoluteContainer {
      * @param match 
      */
     mutate(match: Match) {
+
         this.calculateGridCellSize(match);
         const renderableArea = this.getRenderableGridBounds(match);
         this.renderableArea.position.set(renderableArea.x, renderableArea.y);
@@ -92,102 +100,36 @@ export default class MatchGrid extends AbsoluteContainer {
         // Removed
         const graphics = new Set(Object.keys(this.graphics));
 
-        // Handle new bombs
-        for (let bomb of match.bombs) {
-
-            const id = bomb.id;
-            let graphic;
-            if (!(id in this.graphics)) {
-                const sheet = this.resources['bomb'].spritesheet;
-                graphic = new PIXI.AnimatedSprite(sheet.animations['exploding']);
-
-                graphic.animationSpeed = 0.3; 
-                graphic.play();
-                graphic.zIndex = LAYERING.ITEM;
-                this.graphics[id] = graphic;
-                this.renderableArea.addChild(graphic);
-            } else {
-                graphic = this.graphics[id];
-            }
-            graphic.width = this.cellWidth;
-            graphic.height = this.cellWidth;
-            graphic.position.x = bomb.position.x * this.cellWidth;
-            graphic.position.y = bomb.position.y * this.cellWidth;
-
-            graphics.delete(id);
-        }
-
         // Handle new grid tiles
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 const id = match.grid[y][x].id;
-                if (!this.grid[y][x] || !(id in this.graphics)) {
-
-                    let spriteName;
-                    switch (match.grid[y][x].type) {
-                        case CellType.OPEN:
-                        case CellType.SPAWN:
-                            spriteName = 'open';
-                            break;
-                        case CellType.BRICK:
-                            spriteName = 'brick';
-                            break;
-                        case CellType.SOLID:
-                            spriteName = 'solid';
-                            break;
-                    }
-
-                    const texture = this.resources[spriteName].texture;
-                    const graphic = new PIXI.Sprite(texture);
-                    graphic.position.x = x * this.cellWidth;
-                    graphic.position.y = y * this.cellWidth;
-                    graphic.width = this.cellWidth;
-                    graphic.height = this.cellWidth;
-                    graphic.zIndex = LAYERING.GROUND;
-
-                    this.graphics[id] = graphic;
-                    this.grid[y][x] = graphic;
-                    this.renderableArea.addChild(graphic);
+                let spriteId;
+                switch (match.grid[y][x].type) {
+                    case CellType.OPEN:
+                    case CellType.SPAWN:
+                        spriteId = 'open';
+                        break;
+                    case CellType.SOLID:
+                        spriteId = 'solid';
+                        break;
                 }
-                graphics.delete(id);
+                this.drawCell(id, new Position(x, y), spriteId, graphics);
             }
         }
 
-        // Handle new powerups
-        for (let powerup of match.powerups) {
-            const id = powerup.id;
-            let graphic = (this.graphics[id] || new PIXI.Graphics()) as PIXI.Graphics;
-            if (!(id in this.graphics)) {
-                graphic = new PIXI.Graphics();
-                graphic.zIndex = LAYERING.ITEM;
-
-                this.graphics[id] = graphic;
-                this.renderableArea.addChild(graphic);
+        for (let entity of Object.values(match.entitities)) {
+            if (entity instanceof Player) {
+                this.drawActor(entity, graphics);
+            } else if (entity instanceof Bomb) {
+                this.drawBomb(entity, graphics);
+            } else if (entity instanceof Explosion) {
+                this.drawExplosion(entity, graphics);
+            } else if (entity instanceof Powerup) {
+                this.drawPowerup(entity, graphics);
+            } else if (entity instanceof Brick) {
+                this.drawBrick(entity, graphics);
             }
-            graphic.clear();
-            graphic
-                .beginFill(0x006ee6)
-                .lineStyle({ width: 1, color: 0x26 })
-                .drawRoundedRect(
-                    (0.25 + powerup.position.x) * this.cellWidth, 
-                    (0.25 + powerup.position.y) * this.cellWidth, 
-                    this.cellWidth / 2,
-                    this.cellWidth / 2,
-                    5
-                )
-                .endFill();
-            graphics.delete(id);
-        }
-
-        // Handle explosions
-        for (let explosion of match.explosions) {
-            this.drawExplosion(explosion, graphics);
-        }
-        for (let player of Object.values(match.players)) {
-            this.drawActor(player, graphics);
-        }
-        for (let bot of Object.values(match.bots)) {
-            this.drawActor(bot, graphics);
         }
 
         // Remove things that are no longer in the game.
@@ -195,6 +137,54 @@ export default class MatchGrid extends AbsoluteContainer {
             this.renderableArea.removeChild(this.graphics[id]);
         }
 
+    }
+
+    drawCell(id: string, position: Position, spriteId: string, check: Set<string>) {
+        const { x, y } = position;
+        if (!this.grid[y][x] || !(id in this.graphics)) {
+
+            const texture = this.resources[spriteId].texture;
+            const graphic = new PIXI.Sprite(texture);
+            graphic.position.x = x * this.cellWidth;
+            graphic.position.y = y * this.cellWidth;
+            graphic.width = this.cellWidth;
+            graphic.height = this.cellWidth;
+            graphic.zIndex = LAYERING.GROUND;
+
+            this.graphics[id] = graphic;
+            this.grid[y][x] = graphic;
+            this.renderableArea.addChild(graphic);
+        }
+        check.delete(id);
+    }
+
+    drawBrick(brick: Brick, check: Set<string>) {
+        this.drawCell(brick.id, brick.position, 'brick', check);
+    }
+
+    drawPowerup(powerup: Powerup, check: Set<string>) {
+        const id = powerup.id;
+        let graphic = (this.graphics[id] || new PIXI.Graphics()) as PIXI.Graphics;
+        if (!(id in this.graphics)) {
+            graphic = new PIXI.Graphics();
+            graphic.zIndex = LAYERING.ITEM;
+
+            this.graphics[id] = graphic;
+            this.renderableArea.addChild(graphic);
+        }
+        graphic.clear();
+        graphic
+            .beginFill(0x006ee6)
+            .lineStyle({ width: 1, color: 0x26 })
+            .drawRoundedRect(
+                (0.25 + powerup.position.x) * this.cellWidth, 
+                (0.25 + powerup.position.y) * this.cellWidth, 
+                this.cellWidth / 2,
+                this.cellWidth / 2,
+                5
+            )
+            .endFill();
+        check.delete(id);
     }
 
     drawExplosion(explosion: Explosion, check: Set<string>) {
@@ -234,7 +224,30 @@ export default class MatchGrid extends AbsoluteContainer {
         }
     }
 
-    drawActor(actor: MovableActor, check: Set<string>) {
+    drawBomb(bomb: Bomb, check: Set<string>) {
+        const id = bomb.id;
+        let graphic;
+        if (!(id in this.graphics)) {
+            const sheet = this.resources['bomb'].spritesheet;
+            graphic = new PIXI.AnimatedSprite(sheet.animations['exploding']);
+
+            graphic.animationSpeed = 0.3; 
+            graphic.play();
+            graphic.zIndex = LAYERING.ITEM;
+            this.graphics[id] = graphic;
+            this.renderableArea.addChild(graphic);
+        } else {
+            graphic = this.graphics[id];
+        }
+        graphic.width = this.cellWidth;
+        graphic.height = this.cellWidth;
+        graphic.position.x = bomb.position.x * this.cellWidth;
+        graphic.position.y = bomb.position.y * this.cellWidth;
+
+        check.delete(id);
+    }
+
+    drawActor(actor: Player, check: Set<string>) {
         const id = actor.id;
         if (!(id in this.graphics)) {
             const graphic = new PIXI.Graphics();
@@ -246,11 +259,9 @@ export default class MatchGrid extends AbsoluteContainer {
         check.delete(id);
 
         const graphic = this.graphics[actor.id] as PIXI.Graphics;
-        if (!actor.isAlive) {
+        if (!actor.isAlive()) {
             graphic.clear();
-            return;
-        }
-        if (actor.isAlive) {
+        } else {
             graphic.clear();
             graphic
                 .beginFill(0xEA4C46)

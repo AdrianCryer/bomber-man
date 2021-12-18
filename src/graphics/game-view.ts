@@ -7,6 +7,8 @@ import Modal from "./modal";
 import StatsBoard from "./statsboard";
 import Match from "../model/match";
 import { AbsoluteContainer } from "./absolute-container";
+import Animation from "./animation";
+import MenuScreen from "./screens/menu";
 
 const ASSETS = {    
     "solid": "../assets/solid-sprite.png",
@@ -34,6 +36,8 @@ export default class GameView {
     levelSelector: Modal;
     menuModal: Modal;
 
+    animations: Animation[];
+
     onPlayFunction: () => void;
 
     constructor(root: HTMLElement, defaultWidth?: number, defaultHeight?: number) {
@@ -41,13 +45,13 @@ export default class GameView {
         this.root = root;
 
         this.app = new PIXI.Application({
-            width: defaultWidth,
-            height: defaultHeight,
+            // width: defaultWidth,
+            // height: defaultHeight,
             antialias: false,
             resizeTo: window
         });
 
-        this.app.renderer.backgroundColor = 0x564dff;
+        // this.app.renderer.backgroundColor = 0x564dff;
 
         this.app.stage.sortableChildren = true;
         root.appendChild(this.app.view);
@@ -57,6 +61,16 @@ export default class GameView {
         PIXI.settings.ROUND_PIXELS = true;
 
         this.viewBounds = new PIXI.Rectangle(0, 0, this.app.view.width, this.app.view.height);
+        this.animations = [];
+        this.app.stage.width = this.app.view.width;
+        this.app.stage.height = this.app.view.height;
+
+        this.app.ticker.add(() => {
+            for (let animation of this.animations) {
+                const elapsedMs = this.app.ticker.elapsedMS;
+                animation.tick(elapsedMs);
+            }
+        })
     }
 
 
@@ -65,10 +79,21 @@ export default class GameView {
     }
 
     initialise() {
-        this.setupMenuModal();
-        this.setupGameOverModal();
-        this.menuModal.draw();
-        this.gameOverModal.draw();
+
+        const menu = new MenuScreen(this.app);
+        this.app.stage.addChild(menu);
+        // this.setupMenuModal();
+        // this.setupGameOverModal();
+        // this.menuModal.draw();
+        // this.gameOverModal.draw();
+
+        // this.app.stage.pivot.set(-this.viewBounds.width / 2, -this.viewBounds.height / 2)
+        // const animation = new Animation(this.menuModal, {
+        //     duration: 2,
+        //     repeat: true
+        // });
+        // animation.start();
+        // this.animations.push(animation);
     }
 
     updateMatch(match: Match) {
@@ -131,6 +156,7 @@ export default class GameView {
                 this.onPlayFunction()
             }
         });
+        // this.gameOverModal.position.set(this.gameOverModal.modalBounds.x, this.gameOverModal.modalBounds.y);
         this.gameOverModal.zIndex = 10;
         this.app.stage.addChild(this.gameOverModal);
         this.gameOverModal.visible = false;
@@ -161,11 +187,19 @@ export default class GameView {
             showCancelButton: false,
             confirmButtonText: "Play",
             darkenBackground: true,
-            modalSizeRatio: { width: 0.5, height: 0.25 },
+            modalSizeRatio: { width: 0.6, height: 0.25 },
             buttonSizeRatio: { width: 0.2, height: 0.2 },
             onConfirm: () => this.onPlayFunction(),
         });
-        this.app.stage.addChild(this.menuModal);
+        const width = this.menuModal.getBounds().width * this.menuModal.options.modalSizeRatio.width;
+        const height = this.menuModal.getBounds().height * this.menuModal.options.modalSizeRatio.height;
+
+        const container = new PIXI.Container();
+        container.addChild(this.menuModal);
+        this.app.stage.addChild(container);
+
+        container.position.set(this.viewBounds.width / 2, this.viewBounds.height / 2);
+        this.menuModal.pivot.set(width / 2, height / 2)
         this.menuModal.visible = false;
     }
 

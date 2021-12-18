@@ -61,7 +61,7 @@ export default class Modal extends AbsoluteContainer {
             borderRadius: 5,
             onClick: options.onConfirm
         });
-        this.addChild(this.confirmButton);
+        this.window.addChild(this.confirmButton);
 
         if (options.showCancelButton) {
             this.cancelButton = new Button({
@@ -76,7 +76,7 @@ export default class Modal extends AbsoluteContainer {
                 borderRadius: 5,
                 onClick: options.onCancel
             });
-            this.addChild(this.cancelButton);
+            this.window.addChild(this.cancelButton);
         }
     }
 
@@ -105,8 +105,8 @@ export default class Modal extends AbsoluteContainer {
         const BUTTON_HEIGHT = this.options.buttonSizeRatio.height;
 
         const buttonAnchor = new Rectangle(
-            this.modalBounds.x + width * (0.5 - BUTTON_WIDTH / 2),
-            this.modalBounds.y + height - this.options.padding - BUTTON_HEIGHT * height,
+            width * (0.5 - BUTTON_WIDTH / 2),
+            height - this.options.padding - BUTTON_HEIGHT * height,
             width * BUTTON_WIDTH,
             height * BUTTON_HEIGHT,
         );
@@ -125,7 +125,6 @@ export default class Modal extends AbsoluteContainer {
                 buttonAnchor.height
             ));
             this.cancelButton.draw();
-            console.log("Drawing cancel button")
         } else {
             this.confirmButton.setBounds(buttonAnchor);
         }
@@ -151,7 +150,6 @@ export default class Modal extends AbsoluteContainer {
             width,
             height
         );
-        this.window.position.set(this.modalBounds.x, this.modalBounds.y);
         
         // Title
         this.title = new PIXI.Text(this.options.title, {
@@ -159,10 +157,10 @@ export default class Modal extends AbsoluteContainer {
             fontSize: 48,
             fill: '#262626'
         });
-        this.addChild(this.title);
+        this.window.addChild(this.title);
         this.title.position.set(
-            this.modalBounds.x + width / 2,
-            this.modalBounds.y + this.options.padding
+            width / 2,
+            this.options.padding
         )
         this.title.anchor.set(0.5, 0);
 

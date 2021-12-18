@@ -136,7 +136,7 @@ export default class StatsBoard extends AbsoluteContainer {
         const rowHeight = this.bounds.width * PLAYER_ROW_HEIGHT_RATIO;
 
         if (player.isAlive()) {
-            const titleText =  new PIXI.Text("Player " + (position + 1), {
+            const titleText =  new PIXI.Text("P" + (position + 1), {
                 fontFamily: "oldschool",
                 fontStyle: "normal",
                 fontSize: `${rowHeight}px`,
@@ -154,8 +154,9 @@ export default class StatsBoard extends AbsoluteContainer {
 
                 const icon = new PIXI.Graphics();
                 const text = new PIXI.Text(player.stats[stat as StatType].toString(), {
-                    fontFamily: "oldschool",
+                    fontFamily: "arial",
                     fontStyle: "normal",
+                    fontWeight: "800",
                     fontSize: `${Math.floor(rowHeight)}px`,
                     fill: '#262626'
                 });

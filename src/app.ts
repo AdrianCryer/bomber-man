@@ -124,7 +124,7 @@ export default class App {
 
     /** This method will not touch the model. */
     setupClient() {
-        this.socket.on("ready", (game: Game) => {
+        this.socket.on("ready", () => {
             console.log("READY")
             this.view.initialise();
             this.view.showMenuScreen();

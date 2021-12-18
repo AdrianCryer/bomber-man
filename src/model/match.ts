@@ -44,32 +44,6 @@ export type MatchSettings = {
     powerupRarityStepFunction: (maxRarity: number, val: number) => number;
 };
 
-// export type PlayerConfig = {
-//     position: Position;
-//     stats: StatsConfig;
-// };
-
-// export type Bomb = {
-//     id: string;
-//     owner: Player;
-//     power: number;
-//     timePlaced: number;
-//     timer: number;
-//     explosionRadius: number;
-//     explosionDuration: number;
-//     position: Position;
-//     isSliding: boolean;
-//     slidingSpeed: number;
-//     slidingDirection?: Direction;
-// };
-
-// export type PowerUp = {
-//     id: string;
-//     position: Position;
-//     type: PowerUpType;
-// };
-
-
 export type GridCell = {
     id: string;
     type: CellType;

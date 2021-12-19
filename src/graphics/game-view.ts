@@ -9,6 +9,7 @@ import Match from "../model/match";
 import { AbsoluteContainer } from "./absolute-container";
 import Animation from "./animation";
 import MenuScreen from "./screens/menu-screen";
+import MatchScreen from "./screens/match-screen";
 
 const ASSETS = {    
     "solid": "../assets/solid-sprite.png",
@@ -35,7 +36,10 @@ export default class GameView {
     winModal: Modal;
     levelSelector: Modal;
     menuModal: Modal;
+
     menuScreen: MenuScreen;
+    matchScreen: MatchScreen;
+    intermediateScreen: AbsoluteContainer;
 
     animations: Animation[];
 
@@ -87,7 +91,18 @@ export default class GameView {
                 {
                     text: "PLAY",
                     onSelect: () => {
-                        this.playScreenTransition(this.onPlayFunction);
+                        this.playScreenTransition(this.menuScreen, () => {
+                            this.intermediateScreen.visible = true;
+                            this.onPlayFunction();
+                            setTimeout(
+                                () => this.playScreenTransition(
+                                    this.grid,
+                                    () => {}, 
+                                    true
+                                ), 
+                                5000
+                            );
+                        });
                     }
                 },
                 {
@@ -103,6 +118,28 @@ export default class GameView {
         this.menuScreen.show();
         this.app.stage.addChild(this.menuScreen);
 
+        /** Intermediate screen */
+        this.intermediateScreen = new AbsoluteContainer();
+        this.intermediateScreen.setBounds(this.viewBounds);
+        this.app.stage.addChild(this.intermediateScreen);
+
+        const style = new PIXI.TextStyle({
+            fontFamily: "8-bit Arcade In",
+            fontStyle: "normal",
+            fill: '#FFFFFF',
+            dropShadow: true,
+            dropShadowAngle: 0.57,
+            dropShadowDistance: 3,
+            fontSize: 80,
+            strokeThickness: 3
+        });
+
+        const centerText = new PIXI.Text("LOADING", style);
+        centerText.position.set(this.viewBounds.width / 2, this.viewBounds.height / 2);
+        centerText.anchor.set(0.5);
+        this.intermediateScreen.addChild(centerText);
+        this.intermediateScreen.visible = false;
+
         // this.setupGameOverModal();
         // this.gameOverModal.draw();
         
@@ -117,14 +154,27 @@ export default class GameView {
         // this.animations.push(animation);
     }
 
-    playScreenTransition(callback: () => void) {
+
+
+    showIntermediateScreen(text: string) {
+        
+
+    }
+
+    playScreenTransition(target: PIXI.Container, callback: () => void, reverse: boolean = false) {
+
+        const { width, height } = this.viewBounds;
+        const stage = this.app.stage;
 
         const hole = new PIXI.Graphics();
-        this.app.stage.addChild(hole);
-        this.menuScreen.mask = hole;
+        stage.addChild(hole);
+        target.mask = hole;
 
-        let radius = Math.max(this.viewBounds.width / 2, this.viewBounds.height / 2) + 50;
-        const { width, height } = this.viewBounds;
+        const maxRadius = Math.max(this.viewBounds.width / 2, this.viewBounds.height / 2) + 50;
+        const speed = 7;
+
+        let radius = reverse ? 0 : maxRadius;
+        
         animate();
 
         function animate() {
@@ -132,6 +182,7 @@ export default class GameView {
             if (radius <= 0) {
                 hole.clear();
                 callback();
+                
                 return;
             }
             hole
@@ -140,35 +191,43 @@ export default class GameView {
                 .drawCircle(width / 2, height / 2, radius)
                 .endFill();
 
-            radius -= 5;
+            radius += (reverse ? speed : -speed);
             requestAnimationFrame(animate);
         }
     }
 
     updateMatch(match: Match) {
-        if (!this.grid) {
+        if (!this.matchScreen) {
 
             this.menuScreen.hide();
-            const [boundsLeft, boundsRight] = 
-                AbsoluteContainer.horizontalSplit(this.viewBounds, STATSBOARD_SPLIT);
 
-            this.grid = new MatchGrid(this.app.loader.resources);
-            this.grid.setBounds(boundsRight);
-            this.app.stage.addChild(this.grid);
+            this.matchScreen = new MatchScreen(this.app, match);
+            this.app.stage.addChild(this.matchScreen);
+            
+            // const [boundsLeft, boundsRight] = 
+                // AbsoluteContainer.horizontalSplit(this.viewBounds, STATSBOARD_SPLIT);
 
-            this.statusBoard = new StatsBoard(this.app.loader.resources);
-            this.app.stage.addChild(this.statusBoard);
+            
+            // this.grid = new MatchGrid(this.app.loader.resources, {
+            //     defaultMapSize: { width: 16, height: 10 }
+            // });
+            // this.grid.setBounds(boundsRight);
+            // this.app.stage.addChild(this.grid);
 
-            const gridBounds = this.grid.getRenderableGridBounds(match)
-            this.statusBoard.setBounds(new PIXI.Rectangle(
-                boundsLeft.x,
-                gridBounds.y,
-                boundsLeft.width,
-                gridBounds.height
-            ));
+            // this.statusBoard = new StatsBoard(this.app.loader.resources);
+            // this.app.stage.addChild(this.statusBoard);
+
+            // const gridBounds = this.grid.getRenderableGridBounds(match)
+            // this.statusBoard.setBounds(new PIXI.Rectangle(
+            //     boundsLeft.x,
+            //     gridBounds.y,
+            //     boundsLeft.width,
+            //     gridBounds.height
+            // ));
         }
-        this.grid.mutate(match);
-        this.statusBoard.mutate(match.getPlayers());
+        this.matchScreen.updateMatch(match);
+        // this.grid.mutate(match);
+        // this.statusBoard.mutate(match.getPlayers());
     }
 
     setupGameOverModal() {
@@ -214,11 +273,11 @@ export default class GameView {
     showMenuScreen() {
         console.log("Showing menu screen");
         this.menuScreen.show();
-        this.gameOverModal.visible = false;
-        if (this.grid) {
-            this.grid.visible = false;
-            this.statusBoard.visible = false;
-        }
+        // this.gameOverModal.visible = false;
+        // if (this.grid) {
+        //     this.grid.visible = false;
+        //     this.statusBoard.visible = false;
+        // }
     }
 
     showGameOverScreen() {
@@ -256,10 +315,9 @@ export default class GameView {
         this.app.renderer.resize(window.innerWidth, window.innerHeight);
         this.viewBounds = new PIXI.Rectangle(0, 0, this.app.screen.width, this.app.screen.height);
 
-        if (this.grid) {
-            this.app.stage.removeChild(this.grid);
-            this.app.stage.removeChild(this.statusBoard);
-            this.grid = null;
+        if (this.matchScreen) {
+            this.app.stage.removeChild(this.matchScreen);
+            this.matchScreen = null;
             this.updateMatch(this.game.currentMatch);
         }
     }

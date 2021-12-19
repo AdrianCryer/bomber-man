@@ -10,6 +10,7 @@ import Explosion from "../model/entities/explosion";
 import Powerup from "../model/entities/powerup";
 import Position from "../util/Position";
 import Brick from "../model/entities/brick";
+import { Size } from "../model/types";
 
 export type GameRenderable<T, S extends PIXI.Container> = T & { graphic?: S, addedToCanvas: boolean };
 export type Resources = PIXI.utils.Dict<PIXI.LoaderResource>;
@@ -22,17 +23,14 @@ enum LAYERING {
 };
 
 export type MatchGridSettings = {
-    backgroundColour: number;
+    // backgroundColour: number;
+    defaultMapSize: Size;
 };
 
 export default class MatchGrid extends AbsoluteContainer {
 
-    explosions: PIXI.Sprite[];
-    bombs: PIXI.Sprite[];
-    powerup: PIXI.Graphics[];
-    players: PIXI.Graphics[];
+    settings: MatchGridSettings;
     grid: PIXI.Sprite[][];
-
     graphics: Record<string, PIXI.Container>; 
     renderableArea: AbsoluteContainer;
     
@@ -40,9 +38,10 @@ export default class MatchGrid extends AbsoluteContainer {
     match: Match;
     resources: Resources;
 
-    constructor(resources: Resources) {
+    constructor(resources: Resources, settings: MatchGridSettings) {
         super();
         this.graphics = {};
+        this.settings = settings;
         this.resources = resources;
         this.renderableArea = new AbsoluteContainer();
         this.renderableArea.sortableChildren = true;
@@ -86,6 +85,7 @@ export default class MatchGrid extends AbsoluteContainer {
 
         this.calculateGridCellSize(match);
         const renderableArea = this.getRenderableGridBounds(match);
+        this.renderableArea.setBounds(renderableArea);
         this.renderableArea.position.set(renderableArea.x, renderableArea.y);
 
         // Setup grid

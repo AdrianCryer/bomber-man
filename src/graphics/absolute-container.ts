@@ -36,4 +36,12 @@ export class AbsoluteContainer extends Container {
             new Rectangle(x + width * splitRatio, y, width * (1 - splitRatio), height),
         ];
     }
+
+    show() {
+        this.visible = true;
+    }
+
+    hide() {
+        this.visible = false;
+    }
 }

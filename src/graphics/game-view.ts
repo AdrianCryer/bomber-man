@@ -8,7 +8,7 @@ import StatsBoard from "./statsboard";
 import Match from "../model/match";
 import { AbsoluteContainer } from "./absolute-container";
 import Animation from "./animation";
-import MenuScreen from "./screens/menu";
+import MenuScreen from "./screens/menu-screen";
 
 const ASSETS = {    
     "solid": "../assets/solid-sprite.png",
@@ -35,6 +35,7 @@ export default class GameView {
     winModal: Modal;
     levelSelector: Modal;
     menuModal: Modal;
+    menuScreen: MenuScreen;
 
     animations: Animation[];
 
@@ -80,12 +81,30 @@ export default class GameView {
 
     initialise() {
 
-        const menu = new MenuScreen(this.app);
-        this.app.stage.addChild(menu);
+        this.menuScreen = new MenuScreen(this.app, {
+            title: "BOMBERMAN",
+            menu: [
+                {
+                    text: "PLAY",
+                    onSelect: this.onPlayFunction
+                },
+                {
+                    text: "VERSUS",
+                    onSelect: () => { console.log("Clicked versus" )}
+                },
+                {
+                    text: "SETTINGS",
+                    onSelect: () => { console.log("Clicked settings" )}
+                }
+            ]
+        });
+        this.menuScreen.show();
+        this.app.stage.addChild(this.menuScreen);
+
         // this.setupMenuModal();
-        // this.setupGameOverModal();
+        this.setupGameOverModal();
         // this.menuModal.draw();
-        // this.gameOverModal.draw();
+        this.gameOverModal.draw();
 
         // this.app.stage.pivot.set(-this.viewBounds.width / 2, -this.viewBounds.height / 2)
         // const animation = new Animation(this.menuModal, {
@@ -98,8 +117,8 @@ export default class GameView {
 
     updateMatch(match: Match) {
         if (!this.grid) {
-            this.menuModal.visible = false;
 
+            this.menuScreen.hide();
             const [boundsLeft, boundsRight] = 
                 AbsoluteContainer.horizontalSplit(this.viewBounds, STATSBOARD_SPLIT);
 
@@ -164,7 +183,7 @@ export default class GameView {
 
     showMenuScreen() {
         console.log("Showing menu screen");
-        this.menuModal.visible = true;
+        this.menuScreen.show();
         this.gameOverModal.visible = false;
         if (this.grid) {
             this.grid.visible = false;
@@ -219,8 +238,8 @@ export default class GameView {
         for (let [name, path] of Object.entries(ASSETS)) {
             this.app.loader.add(name, path);
         }
-        await new Promise((resolve, reject) => {
-            this.app.loader.load((loader, resources) => resolve(resources))
+        await new Promise(resolve => {
+            this.app.loader.load((_, resources) => resolve(resources))
         });
 
         const font = new FontFaceObserver("oldschool");

@@ -55,8 +55,7 @@ export default class MenuScreen extends AbsoluteContainer {
         frameBackground.height = this.bounds.height - BORDER_PADDING * 2;
         frameBackground.tileScale.set(20)
         frameBackground.position.set(BORDER_PADDING);
-        frameBackground.filters =  [new PIXI.filters.AlphaFilter(0.35)]
-        frameBackground.tint = 0x004773;
+        frameBackground.filters =  [new PIXI.filters.AlphaFilter(0.1)]
         
         this.addChild(frame);
         this.addChild(frameBackground);

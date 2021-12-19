@@ -86,7 +86,9 @@ export default class GameView {
             menu: [
                 {
                     text: "PLAY",
-                    onSelect: this.onPlayFunction
+                    onSelect: () => {
+                        this.playScreenTransition(this.onPlayFunction);
+                    }
                 },
                 {
                     text: "VERSUS",
@@ -101,11 +103,11 @@ export default class GameView {
         this.menuScreen.show();
         this.app.stage.addChild(this.menuScreen);
 
+        // this.setupGameOverModal();
+        // this.gameOverModal.draw();
+        
         // this.setupMenuModal();
-        this.setupGameOverModal();
         // this.menuModal.draw();
-        this.gameOverModal.draw();
-
         // this.app.stage.pivot.set(-this.viewBounds.width / 2, -this.viewBounds.height / 2)
         // const animation = new Animation(this.menuModal, {
         //     duration: 2,
@@ -113,6 +115,34 @@ export default class GameView {
         // });
         // animation.start();
         // this.animations.push(animation);
+    }
+
+    playScreenTransition(callback: () => void) {
+
+        const hole = new PIXI.Graphics();
+        this.app.stage.addChild(hole);
+        this.menuScreen.mask = hole;
+
+        let radius = Math.max(this.viewBounds.width / 2, this.viewBounds.height / 2) + 50;
+        const { width, height } = this.viewBounds;
+        animate();
+
+        function animate() {
+
+            if (radius <= 0) {
+                hole.clear();
+                callback();
+                return;
+            }
+            hole
+                .clear()
+                .beginFill()
+                .drawCircle(width / 2, height / 2, radius)
+                .endFill();
+
+            radius -= 5;
+            requestAnimationFrame(animate);
+        }
     }
 
     updateMatch(match: Match) {

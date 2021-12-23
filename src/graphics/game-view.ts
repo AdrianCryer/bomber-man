@@ -7,9 +7,9 @@ import Modal from "./modal";
 import StatsBoard from "./statsboard";
 import Match from "../model/match";
 import { AbsoluteContainer } from "./absolute-container";
-import Animation from "./animation";
 import MenuScreen from "./screens/menu-screen";
 import MatchScreen from "./screens/match-screen";
+import ScreenManager from "./screens/screen-manager";
 
 const ASSETS = {    
     "solid": "../assets/solid-sprite.png",
@@ -19,8 +19,6 @@ const ASSETS = {
     "explosion": "../assets/explosion-spritesheet.json",
     "skull": "../assets/skull.png"
 };
-
-const STATSBOARD_SPLIT = 0.2;
 
 export default class GameView {
 
@@ -37,11 +35,10 @@ export default class GameView {
     levelSelector: Modal;
     menuModal: Modal;
 
-    menuScreen: MenuScreen;
     matchScreen: MatchScreen;
-    intermediateScreen: AbsoluteContainer;
 
     animations: Animation[];
+    screenManager: ScreenManager;
 
     onPlayFunction: () => void;
 
@@ -56,8 +53,6 @@ export default class GameView {
             resizeTo: window
         });
 
-        // this.app.renderer.backgroundColor = 0x564dff;
-
         this.app.stage.sortableChildren = true;
         root.appendChild(this.app.view);
 
@@ -69,59 +64,15 @@ export default class GameView {
         this.animations = [];
         this.app.stage.width = this.app.view.width;
         this.app.stage.height = this.app.view.height;
-
-        this.app.ticker.add(() => {
-            for (let animation of this.animations) {
-                const elapsedMs = this.app.ticker.elapsedMS;
-                animation.tick(elapsedMs);
-            }
-        })
     }
-
 
     onPlay(fn: () => void) {
         this.onPlayFunction = fn
     }
 
-    initialise() {
-
-        this.menuScreen = new MenuScreen(this.app, {
-            title: "BOMBERMAN",
-            menu: [
-                {
-                    text: "PLAY",
-                    onSelect: () => {
-                        this.playScreenTransition(this.menuScreen, () => {
-                            this.intermediateScreen.visible = true;
-                            this.onPlayFunction();
-                            setTimeout(
-                                () => this.playScreenTransition(
-                                    this.grid,
-                                    () => {}, 
-                                    true
-                                ), 
-                                5000
-                            );
-                        });
-                    }
-                },
-                {
-                    text: "VERSUS",
-                    onSelect: () => { console.log("Clicked versus" )}
-                },
-                {
-                    text: "SETTINGS",
-                    onSelect: () => { console.log("Clicked settings" )}
-                }
-            ]
-        });
-        this.menuScreen.show();
-        this.app.stage.addChild(this.menuScreen);
-
-        /** Intermediate screen */
-        this.intermediateScreen = new AbsoluteContainer();
-        this.intermediateScreen.setBounds(this.viewBounds);
-        this.app.stage.addChild(this.intermediateScreen);
+    createIntermediateScreen() {
+        const intermediateScreen = new AbsoluteContainer();
+        intermediateScreen.setBounds(this.viewBounds);
 
         const style = new PIXI.TextStyle({
             fontFamily: "8-bit Arcade In",
@@ -137,178 +88,59 @@ export default class GameView {
         const centerText = new PIXI.Text("LOADING", style);
         centerText.position.set(this.viewBounds.width / 2, this.viewBounds.height / 2);
         centerText.anchor.set(0.5);
-        this.intermediateScreen.addChild(centerText);
-        this.intermediateScreen.visible = false;
+        intermediateScreen.addChild(centerText);
 
-        // this.setupGameOverModal();
-        // this.gameOverModal.draw();
-        
-        // this.setupMenuModal();
-        // this.menuModal.draw();
-        // this.app.stage.pivot.set(-this.viewBounds.width / 2, -this.viewBounds.height / 2)
-        // const animation = new Animation(this.menuModal, {
-        //     duration: 2,
-        //     repeat: true
-        // });
-        // animation.start();
-        // this.animations.push(animation);
+        return intermediateScreen;
     }
 
+    initialise() {
 
+        this.screenManager = new ScreenManager(this.app);
+        this.screenManager.navigate(
+            "menu",
+            new MenuScreen(this.app, {
+                title: "BOMBERMAN",
+                menu: [
+                    {
+                        text: "PLAY",
+                        onSelect: () => {
 
-    showIntermediateScreen(text: string) {
-        
-
+                            const intermediateScreen = this.createIntermediateScreen();
+                            this.screenManager.navigate(
+                                "intermediate",
+                                intermediateScreen,
+                                { transitionName: 'radial-in' }
+                            );
+                            this.onPlayFunction();
+                        }
+                    },
+                    {
+                        text: "VERSUS",
+                        onSelect: () => { console.log("Clicked versus" )}
+                    },
+                    {
+                        text: "SETTINGS",
+                        onSelect: () => { console.log("Clicked settings" )}
+                    }
+                ]
+            })
+        );
     }
 
-    playScreenTransition(target: PIXI.Container, callback: () => void, reverse: boolean = false) {
+    onGameReady(game: Game) {
+        setTimeout(() => {
+            this.screenManager.navigate(
+                "match", new MatchScreen(this.app, game.currentMatch),
+                { transitionName: 'radial-out' }
+            );
+        }, 3000);
+    }
 
-        const { width, height } = this.viewBounds;
-        const stage = this.app.stage;
-
-        const hole = new PIXI.Graphics();
-        stage.addChild(hole);
-        target.mask = hole;
-
-        const maxRadius = Math.max(this.viewBounds.width / 2, this.viewBounds.height / 2) + 50;
-        const speed = 7;
-
-        let radius = reverse ? 0 : maxRadius;
-        
-        animate();
-
-        function animate() {
-
-            if (radius <= 0) {
-                hole.clear();
-                callback();
-                
-                return;
-            }
-            hole
-                .clear()
-                .beginFill()
-                .drawCircle(width / 2, height / 2, radius)
-                .endFill();
-
-            radius += (reverse ? speed : -speed);
-            requestAnimationFrame(animate);
+    onMatchUpdate(match: Match) {
+        const matchScreen = this.screenManager.getScreen("match") as MatchScreen;
+        if (matchScreen) {
+            matchScreen.updateMatch(match);
         }
-    }
-
-    updateMatch(match: Match) {
-        if (!this.matchScreen) {
-
-            this.menuScreen.hide();
-
-            this.matchScreen = new MatchScreen(this.app, match);
-            this.app.stage.addChild(this.matchScreen);
-            
-            // const [boundsLeft, boundsRight] = 
-                // AbsoluteContainer.horizontalSplit(this.viewBounds, STATSBOARD_SPLIT);
-
-            
-            // this.grid = new MatchGrid(this.app.loader.resources, {
-            //     defaultMapSize: { width: 16, height: 10 }
-            // });
-            // this.grid.setBounds(boundsRight);
-            // this.app.stage.addChild(this.grid);
-
-            // this.statusBoard = new StatsBoard(this.app.loader.resources);
-            // this.app.stage.addChild(this.statusBoard);
-
-            // const gridBounds = this.grid.getRenderableGridBounds(match)
-            // this.statusBoard.setBounds(new PIXI.Rectangle(
-            //     boundsLeft.x,
-            //     gridBounds.y,
-            //     boundsLeft.width,
-            //     gridBounds.height
-            // ));
-        }
-        this.matchScreen.updateMatch(match);
-        // this.grid.mutate(match);
-        // this.statusBoard.mutate(match.getPlayers());
-    }
-
-    setupGameOverModal() {
-        const skullTexture = this.app.loader.resources['skull'].texture;
-        const skull = new PIXI.Sprite(skullTexture);
-
-        skull.texture.baseTexture.scaleMode = PIXI.SCALE_MODES.NEAREST;
-        skull.width = 120;
-        skull.height = 120;
-        skull.anchor.set(0.5, 0.5);
-        skull.tint = 0x262626;
-
-        this.gameOverModal = new Modal(this.viewBounds, {
-            padding: 40,
-            title: "Game Over",
-            showCancelButton: true,
-            cancelButtonText: "Retry",
-            confirmButtonText: "Menu",
-            darkenBackground: true,
-            modalSizeRatio: { width: 0.6, height: 0.5 },
-            buttonSizeRatio: { width: 0.2, height: 0.1 },
-            icon: skull,
-            onConfirm: () => {
-                this.app.stage.removeChild(this.grid);
-                this.app.stage.removeChild(this.statusBoard);
-                this.grid = null;
-                this.showMenuScreen();
-            },
-            onCancel: () => {
-                this.app.stage.removeChild(this.grid);
-                this.app.stage.removeChild(this.statusBoard);
-                this.grid = null;
-                this.gameOverModal.visible = false;
-                this.onPlayFunction()
-            }
-        });
-        // this.gameOverModal.position.set(this.gameOverModal.modalBounds.x, this.gameOverModal.modalBounds.y);
-        this.gameOverModal.zIndex = 10;
-        this.app.stage.addChild(this.gameOverModal);
-        this.gameOverModal.visible = false;
-    }
-
-    showMenuScreen() {
-        console.log("Showing menu screen");
-        this.menuScreen.show();
-        // this.gameOverModal.visible = false;
-        // if (this.grid) {
-        //     this.grid.visible = false;
-        //     this.statusBoard.visible = false;
-        // }
-    }
-
-    showGameOverScreen() {
-        this.gameOverModal.visible = true;
-    }
-
-    showWinScreen() {
-
-    }
-
-    setupMenuModal() {
-        this.menuModal = new Modal(this.viewBounds, {
-            padding: 40,
-            title: "Bomberman",
-            showCancelButton: false,
-            confirmButtonText: "Play",
-            darkenBackground: true,
-            modalSizeRatio: { width: 0.6, height: 0.25 },
-            buttonSizeRatio: { width: 0.2, height: 0.2 },
-            onConfirm: () => this.onPlayFunction(),
-        });
-        const width = this.menuModal.getBounds().width * this.menuModal.options.modalSizeRatio.width;
-        const height = this.menuModal.getBounds().height * this.menuModal.options.modalSizeRatio.height;
-
-        const container = new PIXI.Container();
-        container.addChild(this.menuModal);
-        this.app.stage.addChild(container);
-
-        container.position.set(this.viewBounds.width / 2, this.viewBounds.height / 2);
-        this.menuModal.pivot.set(width / 2, height / 2)
-        this.menuModal.visible = false;
     }
 
     resize() {
@@ -318,7 +150,7 @@ export default class GameView {
         if (this.matchScreen) {
             this.app.stage.removeChild(this.matchScreen);
             this.matchScreen = null;
-            this.updateMatch(this.game.currentMatch);
+            // this.updateMatch(this.game.currentMatch);
         }
     }
 

@@ -41,12 +41,14 @@ export default class Game {
     inMatch: boolean;
     currentMatch: Match;
     maps: Record<string, GameMap>;
+    currentLevel: number;
 
     constructor(settings: GameSettings, playerIds: string[]) {
         this.settings = settings;
         this.playerIds = playerIds;
         this.inMatch = false;
         this.maps = {};
+        this.currentLevel = 1;
     }
 
     startMatch(matchSettings: MatchSettings) {

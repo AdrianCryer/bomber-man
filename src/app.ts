@@ -82,7 +82,8 @@ export default class App {
         this.socket.on("play", () => {
             if (!this.model.inMatch) {
 
-                this.model.startDefaultMatch()
+                this.model.startDefaultMatch();
+                this.socket.emit("game_ready", this.model);
 
                 // Setup fixed update ticker
                 this.ticker.add(() => {
@@ -125,15 +126,17 @@ export default class App {
     /** This method will not touch the model. */
     setupClient() {
         this.socket.on("ready", () => {
-            console.log("READY")
             this.view.initialise();
-            this.view.showMenuScreen();
         });
+        this.socket.on("game_ready", (game: Game) => {
+            this.view.onGameReady(game);
+        });
+
         this.socket.on("update_match", (match: Match) => {
-            this.view.updateMatch(match);
+            this.view.onMatchUpdate(match);
         });
         this.socket.on("match_over", () => {
-            this.view.showGameOverScreen();
+            // this.view.showGameOverScreen();
         });
         this.view.onPlay(() => this.socket.emit("play"));
         this.controller.setup();

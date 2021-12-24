@@ -1,10 +1,10 @@
 import shortUUID from "short-uuid";
-import Position from "../util/Position";
+import { Position, Direction } from "../util/types";
 import Bot from "./entities/bot";
 import Entity, { Behaviour, BehaviourClass } from "./entities/entity";
 import GameMap, { CellType } from "./game-map";
 import Player from "./entities/player";
-import { Direction, PowerUpType, StatsConfig, StatType } from "./types";
+import { PowerUpType, StatsConfig, StatType } from "./types";
 import Explosion from "./entities/explosion";
 import { Slidable } from "./behaviours/slidable";
 import Brick from "./entities/brick";
@@ -113,9 +113,7 @@ export default class Match {
                 }
                 if (this.grid[y][x].type === CellType.OPEN &&
                     Math.random() <= this.settings.brickSpawnChance) {
-                    
                     this.createEntity(new Brick(shortUUID.generate(), new Position(x, y)))
-                    // this.grid[y][x] = this.createCell(CellType.BRICK);
                 }
             }
         }
@@ -191,19 +189,20 @@ export default class Match {
         return true;
     }
 
-    getNextPosition(position: Position, direction: Direction, delta: number = 1): Position {
-        let nextPos = position.clone();
-        if (direction === Direction.UP) {
-            nextPos.y -= delta;
-        } else if (direction === Direction.DOWN) {
-            nextPos.y += delta;
-        } else if (direction === Direction.LEFT) {
-            nextPos.x -= delta;
-        } else if (direction === Direction.RIGHT) {
-            nextPos.x += delta;
-        }
-        return nextPos;
-    }
+    /** @TODO REMOVE / REPLACE USAGE WITH Position.getNextPosition */
+    // getNextPosition(position: Position, direction: Direction, delta: number = 1): Position {
+    //     let nextPos = position.clone();
+    //     if (direction === Direction.UP) {
+    //         nextPos.y -= delta;
+    //     } else if (direction === Direction.DOWN) {
+    //         nextPos.y += delta;
+    //     } else if (direction === Direction.LEFT) {
+    //         nextPos.x -= delta;
+    //     } else if (direction === Direction.RIGHT) {
+    //         nextPos.x += delta;
+    //     }
+    //     return nextPos;
+    // }
 
     getEntitiesWithBehaviour<B extends Behaviour>(cls: BehaviourClass<B>): Entity[] {
         let result = [];

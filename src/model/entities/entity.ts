@@ -1,4 +1,4 @@
-import Position from "../../util/Position";
+import { Position } from "../../util/types";
 import Match from "../match";
 
 

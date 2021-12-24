@@ -1,4 +1,4 @@
-import Position from "../../util/Position";
+import { Position } from "../../util/types";
 import Damagable from "../behaviours/damagable";
 import Match from "../match";
 import { StatType } from "../types";

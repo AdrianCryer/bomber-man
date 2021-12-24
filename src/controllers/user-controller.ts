@@ -1,5 +1,5 @@
 import { EventEmitter } from "stream";
-import { Direction } from "../model/types";
+import { Direction } from "../util/types";
 
 const keyMap : { [key: string]: Direction } = {
     'ArrowRight': Direction.RIGHT,

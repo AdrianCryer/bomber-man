@@ -1,14 +1,10 @@
 import shortUUID from "short-uuid";
-import Position from "../../util/Position";
+import { Direction, Position } from "../../util/types";
 import Damagable from "../behaviours/damagable";
-import { Slidable } from "../behaviours/slidable";
 import { CellType } from "../game-map";
 import Match from "../match";
-import { Direction } from "../types";
-import { BombConfig } from "./bomb";
 import Brick from "./brick";
 import Entity from "./entity";
-import Powerup from "./powerup";
 
 export type ExplosionCell = {
     id: string;
@@ -69,7 +65,7 @@ export default class Explosion extends Entity {
             };
             let isStopping = (i === radius - 1);
             if (i < radius - 1) {
-                const next = match.getNextPosition(position, direction);
+                const next = position.getNextPosition(direction);
                 if (!match.positionIsInBounds(next) || match.getCell(next).type === CellType.SOLID) {
                     isStopping = true;
                 }

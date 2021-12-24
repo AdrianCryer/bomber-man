@@ -1,5 +1,5 @@
 import shortUUID from "short-uuid";
-import Position from "../../util/Position";
+import { Position } from "../../util/types";
 import Damagable from "../behaviours/damagable";
 import match from "../match";
 import Entity from "./entity";

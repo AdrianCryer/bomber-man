@@ -1,15 +1,6 @@
-import Position from "../util/Position";
-
-export enum Direction {
-    UP = 0,
-    LEFT = 1,
-    DOWN = 2,
-    RIGHT = 3,
-}
+import { Position } from "../util/types";
 
 // export type Position = { x: number; y: number };
-
-export type Size = { width: number; height: number };
 
 export type StatsConfig = {
     // Blocks per second

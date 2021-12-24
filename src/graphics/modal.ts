@@ -3,7 +3,7 @@ import { Graphics } from '@pixi/graphics';
 import { Rectangle } from 'pixi.js';
 import { AbsoluteContainer } from "./absolute-container";
 import Button from './button';
-import { Size } from '../model/types';
+import { Size } from '../util/types';
 
 export type ModalOptions = {
     padding?: number;

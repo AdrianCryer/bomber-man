@@ -1,7 +1,7 @@
 import Match from "../match";
-import { Direction } from "../types";
 import Entity, { Behaviour } from "../entities/entity";
 import { Slidable } from "./slidable";
+import { Direction } from "../../util/types";
 
 
 export class Movement implements Behaviour {
@@ -25,14 +25,14 @@ export class Movement implements Behaviour {
     onUpdate(entity: Entity, match: Match, time: number) {
 
         if (!this.inTransition && this.wantsToMove) {
-            const nextPos = match.getNextPosition(entity.position, this.movingDirection);
+            const nextPos = entity.position.getNextPosition(this.movingDirection);
             if (!match.positionIsBlocked(nextPos)) {
 
                 let canMove = true;
                 const slidableEntities = match.getEntitiesWithBehaviourAtPosition(Slidable, nextPos);
 
                 if (slidableEntities.length > 0) {
-                    const entityNextPos = match.getNextPosition(nextPos, this.movingDirection);
+                    const entityNextPos = nextPos.getNextPosition(this.movingDirection);
                     canMove = match.positionIsTraversable(entityNextPos);
 
                     if (canMove) {
@@ -58,7 +58,7 @@ export class Movement implements Behaviour {
             const delta = this.speed / match.settings.tickrate;
             this.moveTransitionPercent += delta;
             this.moveTransitionPercent = Math.min(this.moveTransitionPercent, 1);
-            entity.position = match.getNextPosition(entity.position, this.moveTransitionDirection, delta);
+            entity.position = entity.position.getNextPosition(this.moveTransitionDirection, delta);
 
             if (this.moveTransitionPercent === 1) {
                 this.inTransition = false;

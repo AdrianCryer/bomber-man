@@ -1,6 +1,6 @@
+import { Direction } from "../../util/types";
 import Entity, { Behaviour } from "../entities/entity";
 import Match from "../match";
-import { Direction } from "../types";
 
 
 export class Slidable implements Behaviour {
@@ -22,9 +22,9 @@ export class Slidable implements Behaviour {
 
         const delta = this.slidingSpeed / match.settings.tickrate;
         const lastPosition = entity.position.clone();
-        entity.position = match.getNextPosition(entity.position, this.slidingDirection, delta);
+        entity.position = entity.position.getNextPosition(this.slidingDirection, delta);
         const closest = entity.position.round();
-        const next = match.getNextPosition(closest, this.slidingDirection);
+        const next = closest.getNextPosition(this.slidingDirection);
 
         if ((closest.x !== entity.position.x || closest.y !== entity.position.y) &&
             !match.positionIsTraversable(next)) {

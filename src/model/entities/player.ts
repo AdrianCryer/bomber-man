@@ -1,9 +1,9 @@
 import shortUUID from "short-uuid";
-import Position from "../../util/Position";
+import { Position, Direction } from "../../util/types";
 import { Movement } from "../behaviours/movement";
 import Entity from "./entity";
 import Match from "../match";
-import { Direction, StatsConfig } from "../types";
+import { StatsConfig } from "../types";
 import Bomb from "./bomb";
 import Damagable from "../behaviours/damagable";
 import Powerup from "./powerup";

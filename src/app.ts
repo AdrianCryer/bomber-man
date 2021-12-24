@@ -7,7 +7,7 @@ import UserController from "./controllers/user-controller";
 import Match from "./model/match";
 import shortUUID from "short-uuid";
 import { Resources } from "./graphics/match-grid";
-import { Direction } from "./model/types";
+import { Direction } from "./util/types";
 
 /**
  * APP: Combines the Model, View and Controllers (MVC). 

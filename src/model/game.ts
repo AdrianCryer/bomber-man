@@ -5,7 +5,7 @@ import Match, { MatchSettings } from "./match";
 export type GameSettings = {};
 
 const DEFAULT_MATCH_SETTINGS: Omit<MatchSettings, 'map'> = {
-    bots: 0,
+    bots: 1,
     difficulty: 'easy',
     tickrate: 64,
     brickSpawnChance: 0.3,

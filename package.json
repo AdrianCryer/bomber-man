@@ -36,6 +36,7 @@
     "heap-js": "^2.1.6",
     "pixi-ease": "^3.0.7",
     "pixi.js": "^6.2.0",
+    "queue-fifo": "^0.2.6",
     "short-uuid": "^4.2.0"
   }
 }

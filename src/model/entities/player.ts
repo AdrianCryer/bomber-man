@@ -21,7 +21,7 @@ export default class Player extends Entity {
         this.bombCount = 0;
         this.shouldPlaceBomb = false;
         this.addBehaviour(new Movement(stats.speed));
-        this.addBehaviour(new Damagable(100, false));
+        this.addBehaviour(new Damagable(100000, false));
     }
 
     onUpdate(match: Match, time: number) {

@@ -4,7 +4,10 @@ import Match from "../match";
 import Player from "./player";
 import { AStar } from "../../util/pathfinding";
 import Brick from "./brick";
+import Bomb from "./bomb";
 import Queue from "queue-fifo";
+import { StatsConfig } from "../types";
+import Damagable from "../behaviours/damagable";
 
 /**
  * 
@@ -17,41 +20,79 @@ import Queue from "queue-fifo";
  * 
  */
 
-type ActionType = 'DESTROY_BRICK' | 'MOVE_TO_SAFETY' | 'SEARCH_FOR_POWERUP' | 'ATTACK_PLAYER';
+type ActionType = 'DESTROY_BRICK' | 'MOVE_TO_SAFETY' | 'SEARCH_FOR_POWERUP' | 'ATTACK_PLAYER' | 'WAIT';
+
+// type Action = {
+//     type: ActionType;
+//     sequence: {
+//         name: 'MOVE_TO' | 'PLACE_BOMB' | 'FLEE' | 'HALT' | 'MOVE_DIR';
+//         position?: Position;
+//         until?: number;
+//     }[];
+// }
 
 type Action = {
-    type: ActionType;
-    sequence: {
-        name: 'MOVE_TO' | 'PLACE_BOMB' | 'FLEE',
-        position?: Position
-    }[];
+    name: 'MOVE_TO' | 'PLACE_BOMB' | 'FLEE' | 'HALT' | 'MOVE_DIR';
+    props?: any;
 }
 
 export default class Bot extends Player {
 
     private actionStack: Action[] = []
+    private inAction: boolean = false;
+
     private currentMoveSequence: Position[] = [];
     private currentMoveIndex: number = 0;
-    private currentActionIndex: number = 0;
-    private inMoveSequence: boolean = false;
+
+    private seenBricks: Set<string> = new Set();
+
+    constructor(id: string, initialPosition: Position, stats: StatsConfig) {
+        super(id, initialPosition, stats);
+        this.actionStack = [];
+    }
 
     chooseNextAction(match: Match) {
 
         const position = this.position.round();
-        const bombablePositions = this.findNearestSpaceAccessibleToBricks(match, position);
+        const bombablePositionsGenerator = this.findNearestSpaceAccessibleToBricks(match, position);
 
-        this.actionStack.push({
-            type: 'DESTROY_BRICK',
-            sequence: [
-                { name: 'MOVE_TO', position: bombablePositions[0] },
-                { name: 'PLACE_BOMB' }
-                // { name: 'FLEE' }
-            ]
-        });
-        console.log("Added new action", this.actionStack);
+        for (let position of bombablePositionsGenerator) {
+
+            // Evaluate position.
+            let newBrick = false;
+            let newBrickIds = [];
+            for (let i = 0; i < 4; i++) {
+                const nextPos = position.getNextPosition(i as Direction);
+                const entities = match.getEntitiesAtPosition(nextPos);
+                for (let entity of entities) {
+                    if (entity instanceof Brick) {
+                        if (!this.seenBricks.has(entity.id)) {
+                            newBrick = true;
+                            newBrickIds.push(entity.id);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (newBrick) {
+                this.actionStack.push({ name: 'PLACE_BOMB' });
+                this.actionStack.push({
+                    name: 'MOVE_TO',
+                    props: {
+                        position
+                    }
+                });
+                for (let id of newBrickIds) {
+                    this.seenBricks.add(id);
+                }
+                break;
+            }
+        }
     }
 
     moveTo(match: Match, to: Position): boolean {
+
         const { width, height } = match.settings.map.props;
         const from = this.position.round();
         const path = AStar.findPath(
@@ -75,89 +116,113 @@ export default class Bot extends Player {
     onUpdate(match: Match, time: number)  {
 
         const movement = this.getBehaviour(Movement);
-        
+
         if (this.actionStack.length == 0) {
+            console.log("No move")
             this.chooseNextAction(match);
         }
+        
+        if (this.actionStack.length > 0) {
+            const action = this.actionStack[this.actionStack.length - 1];
 
-        if (this.actionStack) {
-            const currentAction = this.actionStack[this.actionStack.length - 1];
-            const currentSequence = currentAction.sequence[this.currentActionIndex];
-            
-            if (currentSequence.name === 'MOVE_TO')  {
-                if (!this.inMoveSequence && !movement.inTransition) {
-                    const canMove = this.moveTo(match, currentSequence.position);
+            // Handle action
+            if (!this.inAction) {
+
+                console.log('starting action', action.name, action)
+                if (action.name === 'MOVE_DIR') {
+                    const { units, direction } = action.props;
+                    movement.setMoving(direction, units);
+                    this.inAction = true;
+                    
+                } else if (action.name === 'MOVE_TO') {
+                    const { position } = action.props;
+                    const canMove = this.moveTo(match, position);
+                    
                     if (!canMove) {
-                        console.log("CANT MOVE")
+                        this.actionStack.pop();
+                        throw new Error(`Cannot traverse to position ${[position.x, position.y]}`);
+                    } else {
+                        this.inAction = true;
                     }
-                    this.inMoveSequence = true;
+                } else if (action.name === 'PLACE_BOMB') {
+                    this.placeBomb();
+                    this.inAction = false;
+                    this.actionStack.pop();
                 }
+            }
 
-                if (this.inMoveSequence && !movement.inTransition) {
-                    const currentPos = this.position.round();
-                    if (Position.equals(this.currentMoveSequence[this.currentMoveIndex], currentPos)) {
-                        this.currentMoveIndex++;
-                        if (this.currentMoveIndex > this.currentMoveSequence.length - 1) {
-                            this.inMoveSequence = false;
-                            this.currentActionIndex++;
-                            this.currentMoveIndex = 0;
+            // Handle actions
+            if (this.inAction) {
+
+                let terminateAction = false;
+                if (action.name === 'MOVE_DIR' && !movement.wantsToMove) {
+                    terminateAction = true;
+                } else if (action.name === 'MOVE_TO') {
+
+                    const currentPosition = this.position.round();
+                    if (!movement.inTransition) {
+                        if (Position.equals(this.currentMoveSequence[this.currentMoveIndex], currentPosition)) {
+
+                            this.currentMoveIndex++;
+                            if (this.currentMoveIndex > this.currentMoveSequence.length - 1) {
+                                this.inAction = false;
+                                this.currentMoveIndex = 0;
+                                this.currentMoveSequence = [];
+                                terminateAction = true;
+                            }
+                        }
+
+                        if (this.inAction) {
+                            const nextPos = this.currentMoveSequence[this.currentMoveIndex];
+                            const deltaX = nextPos.x - currentPosition.x;
+                            const deltaY = nextPos.y - currentPosition.y;
+                
+                            let direction: Direction;
+                            if (deltaX < 0) direction = Direction.LEFT;
+                            else if (deltaX > 0) direction = Direction.RIGHT;
+                            else if (deltaY < 0) direction = Direction.UP;
+                            else if (deltaY > 0) direction = Direction.DOWN;
+                            movement.setMoving(direction, 1);
                         }
                     }
-
-                    if (this.inMoveSequence) {
-                        const nextPos = this.currentMoveSequence[this.currentMoveIndex];
-                        const deltaX = nextPos.x - currentPos.x;
-                        const deltaY = nextPos.y - currentPos.y;
-            
-                        let direction: Direction;
-                        if (deltaX < 0) direction = Direction.LEFT;
-                        else if (deltaX > 0) direction = Direction.RIGHT;
-                        else if (deltaY < 0) direction = Direction.UP;
-                        else if (deltaY > 0) direction = Direction.DOWN;
-                        this.setMoving(direction);
-                    }
                 }
-            } else if (currentSequence.name === 'PLACE_BOMB') {
-                this.placeBomb();
-                this.currentActionIndex++;
-            }
 
-            console.log(this.currentActionIndex, currentAction.sequence.length - 1)
-            if (this.currentActionIndex > currentAction.sequence.length - 1) {
-                this.actionStack.pop();
-                this.currentActionIndex = 0;
+                if (terminateAction) {
+                    this.inAction = false;
+                    this.actionStack.pop();
+                }
             }
         }
-        
+
         super.onUpdate(match, time);
     }
 
     getTraversableNeighbours(match: Match, position: Position): Position[] {
+
         let neighbours = [];
         for (let i = 0; i < 4; i++) {
             const direction = i as Direction;
             const nextPos = position.getNextPosition(direction);
 
             if (match.positionIsInBounds(nextPos) && match.positionIsTraversable(nextPos)) {
+                for (let ent of match.getEntitiesAtPosition(nextPos)) {
+                    if (ent instanceof Bomb) {
+                        console.log("Adding bomb position", nextPos)
+                    }
+                }
                 neighbours.push(nextPos);
             }
         }
         return neighbours;
     }
 
-    findNearestSpaceAccessibleToBricks(match: Match, position: Position): Position[] {
+    *findNearestSpaceAccessibleToBricks(match: Match, position: Position): IterableIterator<Position> {
 
-        let result: Position[] = [];
-
-        if (match.positionIsBlocked(position)) {
-            throw new Error("Starting Position is not traversable");
-        }
-
+        // let result: Position[] = [];
         let seen = new Set();
         seen.add(`${position.x},${position.y}`);
         let topK = 1;
 
-        // Really want BFS....
         let queue = new Queue<Position>();
         queue.enqueue(position);
 
@@ -170,19 +235,19 @@ export default class Bot extends Player {
                 const direction = i as Direction;
                 const nextPos = current.getNextPosition(direction);
                 
-                if (!foundBrick) {
+                if (!foundBrick && !Position.equals(current, position)) {
                     const entities = match.getEntitiesAtPosition(nextPos);
                     for (let entity of entities) {
                         if (entity instanceof Brick) {
-                            topK -= 1;
-                            result.push(current);
+                            yield current;
+                            // result.push(current);
                             foundBrick = true;
                             break;
                         }
                     }
                 }
                     
-                if (match.positionIsInBounds(nextPos) && !match.positionIsBlocked(nextPos)) {
+                if (match.positionIsInBounds(nextPos) && match.positionIsTraversable(nextPos)) {
                     const key = `${nextPos.x},${nextPos.y}`;
                     if (!seen.has(key)) {
                         seen.add(key);
@@ -192,7 +257,7 @@ export default class Bot extends Player {
             }
         }
         
-        return result;
+        // return result;
     }
 
     goForPowerup() {

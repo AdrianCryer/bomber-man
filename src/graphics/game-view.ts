@@ -133,7 +133,7 @@ export default class GameView {
                 "match", new MatchScreen(this.app, game.currentMatch),
                 { transitionName: 'radial-out' }
             );
-        }, 3000);
+        }, 0);
     }
 
     onMatchUpdate(match: Match) {

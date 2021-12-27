@@ -189,21 +189,6 @@ export default class Match {
         return true;
     }
 
-    /** @TODO REMOVE / REPLACE USAGE WITH Position.getNextPosition */
-    // getNextPosition(position: Position, direction: Direction, delta: number = 1): Position {
-    //     let nextPos = position.clone();
-    //     if (direction === Direction.UP) {
-    //         nextPos.y -= delta;
-    //     } else if (direction === Direction.DOWN) {
-    //         nextPos.y += delta;
-    //     } else if (direction === Direction.LEFT) {
-    //         nextPos.x -= delta;
-    //     } else if (direction === Direction.RIGHT) {
-    //         nextPos.x += delta;
-    //     }
-    //     return nextPos;
-    // }
-
     getEntitiesWithBehaviour<B extends Behaviour>(cls: BehaviourClass<B>): Entity[] {
         let result = [];
         for (let entity of Object.values(this.entitities)) {

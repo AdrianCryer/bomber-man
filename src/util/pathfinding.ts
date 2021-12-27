@@ -14,10 +14,6 @@ export class AStar {
         goal: Position, 
         heuristic: HeuristicFunction): Position[] {
 
-        if (getNeighbours(goal).length == 0) {
-            return [];
-        }
-
         const containsComparator = (a: HeapItem, b: HeapItem) => Position.equals(a.position, b.position);
         const scoreComparator = (a: HeapItem, b: HeapItem) => a.score - b.score;
 

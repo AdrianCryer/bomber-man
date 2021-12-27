@@ -12,6 +12,7 @@ export class Movement implements Behaviour {
     moveTransitionPercent: number;
     moveTransitionDirection: Direction;
     speed: number;
+    moveUnits: number;
 
     constructor(speed: number) {
         this.speed = speed;
@@ -20,6 +21,7 @@ export class Movement implements Behaviour {
         this.movingDirection = -1;
         this.moveTransitionDirection = -1;
         this.moveTransitionPercent = 0;
+        this.moveUnits = -1;
     }
 
     onUpdate(entity: Entity, match: Match, time: number) {
@@ -63,14 +65,22 @@ export class Movement implements Behaviour {
             if (this.moveTransitionPercent === 1) {
                 this.inTransition = false;
                 entity.position = entity.position.round();
+
+                if (this.moveUnits >= 0) {
+                    this.moveUnits -= 1;
+                }
+                if (this.moveUnits === 0) {
+                    this.stopMoving(this.movingDirection);
+                }
             }
             match.updateEntityPosition(entity, lastPosition);
         }
     }
 
-    setMoving(direction: Direction) {
+    setMoving(direction: Direction, units: number = -1) {
         this.wantsToMove = true;
         this.movingDirection = direction;
+        this.moveUnits = units;
     }
 
     stopMoving(direction: Direction) {

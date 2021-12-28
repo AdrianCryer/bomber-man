@@ -21,7 +21,6 @@ export default class MenuScreen extends AbsoluteContainer {
     options: MenuOptions;
 
     constructor(app: PIXI.Application, options: MenuOptions) {
-
         super();
         this.app = app;
         this.options = options;

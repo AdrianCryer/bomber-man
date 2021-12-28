@@ -1,4 +1,4 @@
-import Match from "../match";
+import Match from "../room";
 import Entity, { Behaviour } from "../entities/entity";
 import { Slidable } from "./slidable";
 import { Direction } from "../../util/types";

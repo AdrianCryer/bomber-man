@@ -1,6 +1,6 @@
 import { Position } from "../../util/types";
 import Damagable from "../behaviours/damagable";
-import Match from "../match";
+import Match from "../room";
 import { StatType } from "../types";
 import Entity from "./entity";
 

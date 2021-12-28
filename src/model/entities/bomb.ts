@@ -1,7 +1,7 @@
 import shortUUID from "short-uuid";
 import { Position, Direction } from "../../util/types";
 import { Slidable } from "../behaviours/slidable";
-import match from "../match";
+import match from "../room";
 import Entity from "./entity";
 import Explosion from "./explosion";
 import Player from "./player";

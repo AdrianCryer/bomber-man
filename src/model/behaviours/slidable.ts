@@ -1,6 +1,6 @@
 import { Direction } from "../../util/types";
 import Entity, { Behaviour } from "../entities/entity";
-import Match from "../match";
+import Match from "../room";
 
 
 export class Slidable implements Behaviour {

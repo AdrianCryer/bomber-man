@@ -1,12 +1,12 @@
 import { Ticker, Loader } from "pixi.js";
-import Game from "./model/game";
+import Game, { GameMode } from "./model/game";
 import GameMap from "./model/game-map";
 import GameView from "./graphics/game-view";
 import EventEmitter from "events";
 import UserController from "./controllers/user-controller";
-import Match from "./model/match";
 import shortUUID from "short-uuid";
 import { Direction, Resources } from "./util/types";
+import Match from "./model/gamemodes/match";
 
 /**
  * APP: Combines the Model, View and Controllers (MVC). 
@@ -29,13 +29,7 @@ import { Direction, Resources } from "./util/types";
  */
 
 const TICK_RATE = 64;
-const DEFAULT_GAME_SETTINGS = {
-    numberOfPlayers: 1,
-    statusBoard: {
-        alignment: 'left',
-        splitRatio: 0.2
-    }
-};
+const DEFAULT_GAME_SETTINGS = {};
 
 const MAPS = {
     'retro': "../maps/retro.txt",
@@ -78,12 +72,20 @@ export default class App {
         this.ticker = new Ticker();
         this.ticker.stop();
 
-        this.socket.on("play", () => {
-            if (!this.model.inMatch) {
+        this.socket.on("play", (mode: GameMode) => {
+            if (!this.model.hasMatchStarted) {
 
-                this.model.startDefaultMatch();
-                this.socket.emit("game_ready", this.model);
+                if (mode === 'versus') {
+                    this.model.startVersusMatch();
+                    this.socket.emit("match_ready", this.model.currentMatch);
+                }
 
+                // Handle Game Over
+                this.model.currentMatch.onGameOver(() => {
+                    this.socket.emit("match_over");
+                    this.ticker.stop();
+                })
+                
                 // Setup fixed update ticker
                 this.ticker.add(() => {
                     let timeNow = (new Date()).getTime();
@@ -95,31 +97,24 @@ export default class App {
                     this.time = timeNow;
                     this.model.mutate(timeNow);
                     this.socket.emit("update_match", this.model.currentMatch);
-
-                    const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
-                    if (!player.isAlive()) {
-                        this.model.endCurrentMatch();
-                        this.socket.emit("match_over");
-                        this.ticker.stop();
-                    }
                 });
                 this.ticker.start();
             }
         });
-        this.socket.on("place_bomb", () => {
-            if (this.model.inMatch) {
-                const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
-                player.placeBomb();
-            }
-        });
-        this.socket.on("set_moving", (direction: Direction) => {
-            const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
-            player.setMoving(direction);
-        });
-        this.socket.on("stop_moving", (direction: Direction) => {
-            const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
-            player.stopMoving(direction);
-        });
+        // this.socket.on("place_bomb", () => {
+        //     if (this.model.hasMatchStarted) {
+        //         const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
+        //         player.placeBomb();
+        //     }
+        // });
+        // this.socket.on("set_moving", (direction: Direction) => {
+        //     const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
+        //     player.setMoving(direction);
+        // });
+        // this.socket.on("stop_moving", (direction: Direction) => {
+        //     const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
+        //     player.stopMoving(direction);
+        // });
     }
 
     /** This method will not touch the model. */
@@ -127,17 +122,17 @@ export default class App {
         this.socket.on("ready", () => {
             this.view.initialise();
         });
-        this.socket.on("game_ready", (game: Game) => {
-            this.view.onGameReady(game);
+        this.socket.on("match_ready", (match: Match) => {
+            this.view.onMatchReady(match);
         });
-
         this.socket.on("update_match", (match: Match) => {
             this.view.onMatchUpdate(match);
         });
         this.socket.on("match_over", () => {
+            console.log("Game over")
             // this.view.showGameOverScreen();
         });
-        this.view.onPlay(() => this.socket.emit("play"));
+        this.view.onPlay((mode) => this.socket.emit("play", mode));
         this.controller.setup();
     }
 

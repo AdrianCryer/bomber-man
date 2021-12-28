@@ -2,7 +2,7 @@ import shortUUID from "short-uuid";
 import { Direction, Position } from "../../util/types";
 import Damagable from "../behaviours/damagable";
 import { CellType } from "../game-map";
-import Match from "../match";
+import Match from "../room";
 import Brick from "./brick";
 import Entity from "./entity";
 

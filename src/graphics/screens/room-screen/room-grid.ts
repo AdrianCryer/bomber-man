@@ -1,6 +1,6 @@
 import * as PIXI from "pixi.js";
 import { CellType } from "../../../model/game-map";
-import Match from "../../../model/match";
+import Match from "../../../model/room";
 import Player from "../../../model/entities/player";
 import { AbsoluteContainer } from "../../absolute-container";
 import Bomb from "../../../model/entities/bomb";
@@ -16,14 +16,14 @@ enum LAYERING {
     TOP = 10
 };
 
-export type MatchGridSettings = {
+export type RoomGridSettings = {
     // backgroundColour: number;
     defaultMapSize: Size;
 };
 
-export default class MatchGrid extends AbsoluteContainer {
+export default class RoomGrid extends AbsoluteContainer {
 
-    settings: MatchGridSettings;
+    settings: RoomGridSettings;
     grid: PIXI.Sprite[][];
     graphics: Record<string, PIXI.Container>; 
     renderableArea: AbsoluteContainer;
@@ -32,7 +32,7 @@ export default class MatchGrid extends AbsoluteContainer {
     match: Match;
     resources: Resources;
 
-    constructor(resources: Resources, settings: MatchGridSettings) {
+    constructor(resources: Resources, settings: RoomGridSettings) {
         super();
         this.graphics = {};
         this.settings = settings;

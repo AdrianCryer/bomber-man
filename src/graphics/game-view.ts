@@ -1,12 +1,11 @@
 import * as PIXI from "pixi.js";
 import { SCALE_MODES } from "pixi.js";
 import FontFaceObserver from "fontfaceobserver";
-import Game from "../model/game";
-import Match from "../model/match";
+import Game, { GameMode } from "../model/game";
 import { AbsoluteContainer } from "./absolute-container";
 import MenuScreen from "./screens/menu-screen";
-import MatchScreen from "./screens/match-screen";
 import ScreenManager from "./screens/screen-manager";
+import Match from "../model/gamemodes/match";
 
 const ASSETS = {    
     "solid": "../assets/solid-sprite.png",
@@ -27,7 +26,7 @@ export default class GameView {
     playerId: string;
     screenManager: ScreenManager;
 
-    onPlayFunction: () => void;
+    onPlayFunction: (mode: GameMode) => void;
 
     constructor(root: HTMLElement, playerId: string, defaultWidth?: number, defaultHeight?: number) {
 
@@ -52,7 +51,7 @@ export default class GameView {
         this.app.stage.height = this.app.view.height;
     }
 
-    onPlay(fn: () => void) {
+    onPlay(fn: (mode: GameMode) => void) {
         this.onPlayFunction = fn
     }
 
@@ -80,8 +79,18 @@ export default class GameView {
     }
 
     initialise() {
-
         this.screenManager = new ScreenManager(this.app);
+
+        const intermediateScreen = this.createIntermediateScreen();
+        const onClickPlay = (mode: GameMode) => {
+            this.screenManager.navigate(
+                "intermediate",
+                intermediateScreen,
+                { transitionName: 'radial-in' }
+            );
+            this.onPlayFunction(mode);
+        };
+        
         this.screenManager.navigate(
             "menu",
             new MenuScreen(this.app, {
@@ -89,20 +98,11 @@ export default class GameView {
                 menu: [
                     {
                         text: "PLAY",
-                        onSelect: () => {
-
-                            const intermediateScreen = this.createIntermediateScreen();
-                            this.screenManager.navigate(
-                                "intermediate",
-                                intermediateScreen,
-                                { transitionName: 'radial-in' }
-                            );
-                            this.onPlayFunction();
-                        }
+                        onSelect: () => onClickPlay('rogue')
                     },
                     {
                         text: "VERSUS",
-                        onSelect: () => { console.log("Clicked versus" )}
+                        onSelect: () => onClickPlay('versus')
                     },
                     {
                         text: "SETTINGS",
@@ -113,20 +113,32 @@ export default class GameView {
         );
     }
 
-    onGameReady(game: Game) {
-        setTimeout(() => {
-            this.screenManager.navigate(
-                "match", new MatchScreen(this.app, game.currentMatch, this.playerId),
-                { transitionName: 'radial-out' }
-            );
-        }, 2000);
+    onMenuClickPlay(mode: GameMode) {
+        if (mode === 'rogue') {
+            // Start into game
+        } else if (mode === 'versus') {
+            /** @todo Show menu */
+
+
+        } else if (mode === 'levels') {
+            // Show level select
+        }
+    }
+
+    onMatchReady(match: Match) {
+        // setTimeout(() => {
+        //     this.screenManager.navigate(
+        //         "match", new MatchScreen(this.app, game.currentMatch, this.playerId),
+        //         { transitionName: 'radial-out' }
+        //     );
+        // }, 2000);
     }
 
     onMatchUpdate(match: Match) {
-        const matchScreen = this.screenManager.getScreen("match") as MatchScreen;
-        if (matchScreen) {
-            matchScreen.updateMatch(match);
-        }
+        // const matchScreen = this.screenManager.getScreen("match") as MatchScreen;
+        // if (matchScreen) {
+        //     matchScreen.updateMatch(match);
+        // }
     }
 
     resize() {

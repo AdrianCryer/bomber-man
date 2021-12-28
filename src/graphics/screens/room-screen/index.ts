@@ -1,21 +1,21 @@
 import * as PIXI from "pixi.js";
 import Player from "../../../model/entities/player";
-import Match from "../../../model/match";
+import Match from "../../../model/room";
 import { AbsoluteContainer } from "../../absolute-container";
-import MatchGrid from "./match-grid";
+import RoomGrid from "./room-grid";
 import StatsPane from "./stats-pane";
 
 const HEADER_HEIGHT_PX = 120;
 const MIN_PADDING_SIDES_PX = 100;
 const MIN_PADDING_BOTTOM_PX = 20;
 
-export default class MatchScreen extends AbsoluteContainer {
+export default class RoomScreen extends AbsoluteContainer {
 
     app: PIXI.Application;
     playerId: string;
     title: PIXI.Text;
     header: AbsoluteContainer;
-    grid: MatchGrid;
+    grid: RoomGrid;
     statsPane: StatsPane;
 
     constructor(app: PIXI.Application, initialMatch: Match, playerId: string) {
@@ -88,7 +88,7 @@ export default class MatchScreen extends AbsoluteContainer {
     }
 
     setupMatch(initialMatch: Match) {
-        this.grid = new MatchGrid(this.app.loader.resources, {
+        this.grid = new RoomGrid(this.app.loader.resources, {
             defaultMapSize: { width: 16, height: 10 }
         });
 

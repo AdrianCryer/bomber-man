@@ -1,15 +1,13 @@
 import shortUUID from "short-uuid";
-import { Position, Direction } from "../util/types";
+import { Position } from "../util/types";
 import Bot from "./entities/bot";
 import Entity, { Behaviour, BehaviourClass } from "./entities/entity";
 import GameMap, { CellType } from "./game-map";
 import Player from "./entities/player";
 import { PowerUpType, StatsConfig, StatType } from "./types";
-import Explosion from "./entities/explosion";
-import { Slidable } from "./behaviours/slidable";
 import Brick from "./entities/brick";
 
-export type MatchSettings = {
+export type RoomSettings = {
 
     // The map to play
     map: GameMap;
@@ -50,10 +48,10 @@ export type GridCell = {
     entities: Set<string>;
 };
 
-export default class Match {
+export default class Room {
 
     entitities: Record<string, Entity>;
-    settings: MatchSettings;
+    settings: RoomSettings;
     playerIds: string[];
     grid: GridCell[][];
     players: Set<string>;
@@ -62,7 +60,7 @@ export default class Match {
     /** Number of elapsed ticks */
     time: number;
 
-    constructor(settings: MatchSettings, playerIds: string[]) {
+    constructor(settings: RoomSettings, playerIds: string[]) {
         this.settings = settings;
         this.playerIds = playerIds;
         this.grid = [];

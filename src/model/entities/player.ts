@@ -2,7 +2,7 @@ import shortUUID from "short-uuid";
 import { Position, Direction } from "../../util/types";
 import { Movement } from "../behaviours/movement";
 import Entity from "./entity";
-import Match from "../match";
+import Match from "../room";
 import { StatsConfig } from "../types";
 import Bomb from "./bomb";
 import Damagable from "../behaviours/damagable";

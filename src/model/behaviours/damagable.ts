@@ -1,6 +1,6 @@
 import Entity from "../entities/entity";
 import entity, { Behaviour } from "../entities/entity";
-import match from "../match";
+import match from "../room";
 
 
 export default class Damagable implements Behaviour {

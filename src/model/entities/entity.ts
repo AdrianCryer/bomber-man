@@ -1,5 +1,5 @@
 import { Position } from "../../util/types";
-import Match from "../match";
+import Match from "../room";
 
 
 export interface Behaviour {

@@ -1,6 +1,6 @@
 import { Position, Direction } from "../../util/types";
 import { Movement } from "../behaviours/movement";
-import Match from "../match";
+import Match from "../room";
 import Player from "./player";
 import { AStar } from "../../util/pathfinding";
 import Brick from "./brick";

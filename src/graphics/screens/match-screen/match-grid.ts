@@ -1,13 +1,13 @@
 import * as PIXI from "pixi.js";
-import { CellType } from "../model/game-map";
-import Match from "../model/match";
-import Player from "../model/entities/player";
-import { AbsoluteContainer } from "./absolute-container";
-import Bomb from "../model/entities/bomb";
-import Explosion from "../model/entities/explosion";
-import Powerup from "../model/entities/powerup";
-import { Position, Size } from "../util/types";
-import Brick from "../model/entities/brick";
+import { CellType } from "../../../model/game-map";
+import Match from "../../../model/match";
+import Player from "../../../model/entities/player";
+import { AbsoluteContainer } from "../../absolute-container";
+import Bomb from "../../../model/entities/bomb";
+import Explosion from "../../../model/entities/explosion";
+import Powerup from "../../../model/entities/powerup";
+import { Position, Size } from "../../../util/types";
+import Brick from "../../../model/entities/brick";
 
 export type GameRenderable<T, S extends PIXI.Container> = T & { graphic?: S, addedToCanvas: boolean };
 export type Resources = PIXI.utils.Dict<PIXI.LoaderResource>;

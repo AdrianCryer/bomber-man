@@ -2,7 +2,7 @@ import * as PIXI from "pixi.js";
 import { SCALE_MODES } from "pixi.js";
 import FontFaceObserver from "fontfaceobserver";
 import Game from "../model/game";
-import MatchGrid from "./match-grid";
+import MatchGrid from "./screens/match-screen/match-grid";
 import Modal from "./modal";
 import StatsBoard from "./statsboard";
 import Match from "../model/match";
@@ -27,31 +27,21 @@ export default class GameView {
     viewBounds: PIXI.Rectangle;
 
     game: Game;
-
-    grid: MatchGrid;
-    statusBoard: StatsBoard;
-    gameOverModal: Modal;
-    winModal: Modal;
-    levelSelector: Modal;
-    menuModal: Modal;
-
-    matchScreen: MatchScreen;
-
-    animations: Animation[];
+    playerId: string;
     screenManager: ScreenManager;
 
     onPlayFunction: () => void;
 
-    constructor(root: HTMLElement, defaultWidth?: number, defaultHeight?: number) {
+    constructor(root: HTMLElement, playerId: string, defaultWidth?: number, defaultHeight?: number) {
 
         this.root = root;
-
         this.app = new PIXI.Application({
             // width: defaultWidth,
             // height: defaultHeight,
             antialias: false,
             resizeTo: window
         });
+        this.playerId = playerId;
 
         this.app.stage.sortableChildren = true;
         root.appendChild(this.app.view);
@@ -61,7 +51,6 @@ export default class GameView {
         PIXI.settings.ROUND_PIXELS = true;
 
         this.viewBounds = new PIXI.Rectangle(0, 0, this.app.view.width, this.app.view.height);
-        this.animations = [];
         this.app.stage.width = this.app.view.width;
         this.app.stage.height = this.app.view.height;
     }
@@ -130,10 +119,10 @@ export default class GameView {
     onGameReady(game: Game) {
         setTimeout(() => {
             this.screenManager.navigate(
-                "match", new MatchScreen(this.app, game.currentMatch),
+                "match", new MatchScreen(this.app, game.currentMatch, this.playerId),
                 { transitionName: 'radial-out' }
             );
-        }, 0);
+        }, 2000);
     }
 
     onMatchUpdate(match: Match) {
@@ -147,11 +136,11 @@ export default class GameView {
         this.app.renderer.resize(window.innerWidth, window.innerHeight);
         this.viewBounds = new PIXI.Rectangle(0, 0, this.app.screen.width, this.app.screen.height);
 
-        if (this.matchScreen) {
-            this.app.stage.removeChild(this.matchScreen);
-            this.matchScreen = null;
+        // if (this.matchScreen) {
+            // this.app.stage.removeChild(this.matchScreen);
+            // this.matchScreen = null;
             // this.updateMatch(this.game.currentMatch);
-        }
+        // }
     }
 
     async preloadAssets() {

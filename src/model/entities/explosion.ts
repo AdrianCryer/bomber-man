@@ -95,6 +95,15 @@ export default class Explosion extends Entity {
         }
     }
 
+    isExplosionCell(position: Position) {
+        for (let cell of this.cells) {
+            if (Position.equals(cell.position, position)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     onUpdate(match: Match, time: number): void {
 
         if (time < this.config.timeCreated + this.config.duration * 1000) {

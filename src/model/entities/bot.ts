@@ -8,6 +8,7 @@ import Bomb from "./bomb";
 import Queue from "queue-fifo";
 import { StatsConfig } from "../types";
 import Damagable from "../behaviours/damagable";
+import Explosion from "./explosion";
 
 /**
  * 
@@ -21,16 +22,6 @@ import Damagable from "../behaviours/damagable";
  */
 
 type ActionType = 'DESTROY_BRICK' | 'MOVE_TO_SAFETY' | 'SEARCH_FOR_POWERUP' | 'ATTACK_PLAYER' | 'WAIT';
-
-// type Action = {
-//     type: ActionType;
-//     sequence: {
-//         name: 'MOVE_TO' | 'PLACE_BOMB' | 'FLEE' | 'HALT' | 'MOVE_DIR';
-//         position?: Position;
-//         until?: number;
-//     }[];
-// }
-
 type Action = {
     name: 'MOVE_TO' | 'PLACE_BOMB' | 'FLEE' | 'HALT' | 'MOVE_DIR';
     props?: any;
@@ -40,15 +31,21 @@ export default class Bot extends Player {
 
     private actionStack: Action[] = []
     private inAction: boolean = false;
-
     private currentMoveSequence: Position[] = [];
     private currentMoveIndex: number = 0;
-
     private seenBricks: Set<string> = new Set();
 
     constructor(id: string, initialPosition: Position, stats: StatsConfig) {
         super(id, initialPosition, stats);
         this.actionStack = [];
+    }
+
+    assessBombPlacement(match: Match, position: Position): number {
+        // Assign each bomb placement a score
+
+        // Assuming bomb has been placed, which has the quickest flee time
+
+        return -1;
     }
 
     chooseNextAction(match: Match) {
@@ -76,6 +73,7 @@ export default class Bot extends Player {
             }
             
             if (newBrick) {
+                // this.actionStack.push({ name: 'FLEE' });
                 this.actionStack.push({ name: 'PLACE_BOMB' });
                 this.actionStack.push({
                     name: 'MOVE_TO',
@@ -111,6 +109,11 @@ export default class Bot extends Player {
         this.currentMoveSequence = path.slice(1);
         this.currentMoveIndex = 0;
         return true;
+    }
+
+    isPositionDangerous(match: Match, position: Position) {
+        // for (let cell )
+        // I
     }
 
     onUpdate(match: Match, time: number)  {
@@ -164,6 +167,12 @@ export default class Bot extends Player {
                         if (Position.equals(this.currentMoveSequence[this.currentMoveIndex], currentPosition)) {
 
                             this.currentMoveIndex++;
+                            
+                            // Check if we need to recalculate the path
+                            // if (this.isPositionDangerous(currentPosition)) {
+                                // this.flee()
+                            // }
+                            
                             if (this.currentMoveIndex > this.currentMoveSequence.length - 1) {
                                 this.inAction = false;
                                 this.currentMoveIndex = 0;
@@ -205,20 +214,23 @@ export default class Bot extends Player {
             const nextPos = position.getNextPosition(direction);
 
             if (match.positionIsInBounds(nextPos) && match.positionIsTraversable(nextPos)) {
-                for (let ent of match.getEntitiesAtPosition(nextPos)) {
-                    if (ent instanceof Bomb) {
-                        console.log("Adding bomb position", nextPos)
-                    }
-                }
                 neighbours.push(nextPos);
             }
         }
+
+        // Avoid damage
+        for (let entity of Object.values(match.entitities)) {
+            if (entity instanceof Explosion) {
+                const explosion = entity as Explosion;
+                neighbours.filter(p => !explosion.isExplosionCell(p));
+            }
+        }
+
         return neighbours;
     }
 
     *findNearestSpaceAccessibleToBricks(match: Match, position: Position): IterableIterator<Position> {
 
-        // let result: Position[] = [];
         let seen = new Set();
         seen.add(`${position.x},${position.y}`);
         let topK = 1;
@@ -240,7 +252,6 @@ export default class Bot extends Player {
                     for (let entity of entities) {
                         if (entity instanceof Brick) {
                             yield current;
-                            // result.push(current);
                             foundBrick = true;
                             break;
                         }
@@ -256,8 +267,6 @@ export default class Bot extends Player {
                 }
             }
         }
-        
-        // return result;
     }
 
     goForPowerup() {

@@ -1,8 +1,9 @@
 import * as PIXI from "pixi.js";
-import Match from "../../model/match";
-import { AbsoluteContainer } from "../absolute-container";
-import MatchGrid from "../match-grid";
-import StatsBoard from "../statsboard";
+import Player from "../../../model/entities/player";
+import Match from "../../../model/match";
+import { AbsoluteContainer } from "../../absolute-container";
+import MatchGrid from "./match-grid";
+import StatsPane from "./stats-pane";
 
 const HEADER_HEIGHT_PX = 120;
 const MIN_PADDING_SIDES_PX = 100;
@@ -11,12 +12,13 @@ const MIN_PADDING_BOTTOM_PX = 20;
 export default class MatchScreen extends AbsoluteContainer {
 
     app: PIXI.Application;
+    playerId: string;
     title: PIXI.Text;
     header: AbsoluteContainer;
     grid: MatchGrid;
-    statsPane: StatsBoard;
+    statsPane: StatsPane;
 
-    constructor(app: PIXI.Application, initialMatch: Match) {
+    constructor(app: PIXI.Application, initialMatch: Match, playerId: string) {
         super();
         this.app = app;
         this.setBounds(new PIXI.Rectangle(
@@ -25,9 +27,11 @@ export default class MatchScreen extends AbsoluteContainer {
             this.app.view.width, 
             this.app.view.height 
         ));
+        this.playerId = playerId;
         this.sortableChildren = true;
 
         this.setupMatch(initialMatch);
+        this.setupStatsPane(initialMatch);
         this.setupHeader();
         this.setupBackground();
     }
@@ -69,7 +73,6 @@ export default class MatchScreen extends AbsoluteContainer {
                 this.bounds.x,
                 gameBounds.y,
                 this.bounds.width,
-                // gameBounds.height
                 this.bounds.height - gameBounds.y
             )
             .endFill();
@@ -77,10 +80,8 @@ export default class MatchScreen extends AbsoluteContainer {
 
         const background = new PIXI.TilingSprite(this.app.loader.resources['brick'].texture);
         background.width = this.bounds.width;
-        // background.height = this.bounds.height - HEADER_HEIGHT_PX;
         background.height = this.bounds.height - gameBounds.y;
         background.tileScale.set(10)
-        // background.position.set(0, HEADER_HEIGHT_PX);
         background.position.set(this.bounds.x, gameBounds.y);
         background.filters =  [new PIXI.filters.AlphaFilter(0.05)];
         this.addChild(background);
@@ -98,11 +99,26 @@ export default class MatchScreen extends AbsoluteContainer {
             this.bounds.height - HEADER_HEIGHT_PX - MIN_PADDING_BOTTOM_PX,
         ));
         this.grid.mutate(initialMatch);
-        this.grid.zIndex = 10;
+        this.grid.zIndex = 1;
         this.addChild(this.grid);
+    }
+
+    setupStatsPane(initialMatch: Match) {
+        this.statsPane = new StatsPane(this.app.loader.resources);
+        const gameBounds = this.grid.renderableArea.getBounds();
+        this.statsPane.setBounds(new PIXI.Rectangle(
+            this.bounds.x,
+            gameBounds.y,
+            (this.width - gameBounds.width) / 2,
+            gameBounds.height
+        ));
+        this.statsPane.zIndex = 15;
+        this.statsPane.mutate(initialMatch.entitities[this.playerId] as Player);
+        this.addChild(this.statsPane);
     }
 
     updateMatch(match: Match) {
         this.grid.mutate(match);
+        this.statsPane.mutate(match.entitities[this.playerId] as Player);
     }
 }

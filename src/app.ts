@@ -6,7 +6,7 @@ import EventEmitter from "events";
 import UserController from "./controllers/user-controller";
 import Match from "./model/match";
 import shortUUID from "short-uuid";
-import { Resources } from "./graphics/match-grid";
+import { Resources } from "./graphics/screens/match-screen/match-grid";
 import { Direction } from "./util/types";
 
 /**
@@ -64,7 +64,7 @@ export default class App {
         this.socket = new EventEmitter();
 
         this.model = new Game(DEFAULT_GAME_SETTINGS, [THIS_PLAYER_ID]);
-        this.view = new GameView(root, 1920, 1080);
+        this.view = new GameView(root, THIS_PLAYER_ID, 1920, 1080);
         this.controller = new UserController(this.socket);
 
         this.setupServer();

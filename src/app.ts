@@ -6,8 +6,7 @@ import EventEmitter from "events";
 import UserController from "./controllers/user-controller";
 import Match from "./model/match";
 import shortUUID from "short-uuid";
-import { Resources } from "./graphics/screens/match-screen/match-grid";
-import { Direction } from "./util/types";
+import { Direction, Resources } from "./util/types";
 
 /**
  * APP: Combines the Model, View and Controllers (MVC). 

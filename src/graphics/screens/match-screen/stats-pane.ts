@@ -1,8 +1,8 @@
 import * as PIXI from "pixi.js";
 import Player from "../../../model/entities/player";
 import { StatType } from "../../../model/types";
+import { Resources } from "../../../util/types";
 import { AbsoluteContainer } from "../../absolute-container";
-import { Resources } from "./match-grid";
 
 const STATS_FONT_SIZE = 18;
 const ICON_GAP = 5;

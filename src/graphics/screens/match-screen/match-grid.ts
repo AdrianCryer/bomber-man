@@ -6,11 +6,8 @@ import { AbsoluteContainer } from "../../absolute-container";
 import Bomb from "../../../model/entities/bomb";
 import Explosion from "../../../model/entities/explosion";
 import Powerup from "../../../model/entities/powerup";
-import { Position, Size } from "../../../util/types";
+import { Position, Resources, Size } from "../../../util/types";
 import Brick from "../../../model/entities/brick";
-
-export type GameRenderable<T, S extends PIXI.Container> = T & { graphic?: S, addedToCanvas: boolean };
-export type Resources = PIXI.utils.Dict<PIXI.LoaderResource>;
 
 enum LAYERING {
     GROUND = 0,

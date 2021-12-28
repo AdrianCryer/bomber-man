@@ -1,4 +1,3 @@
-import { ease } from "pixi-ease";
 import * as PIXI from "pixi.js";
 import { AbsoluteContainer } from "../absolute-container";
 

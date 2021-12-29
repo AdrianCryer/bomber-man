@@ -23,7 +23,8 @@ export default class Game {
 
     startVersusMatch() {
         this.hasMatchStarted = true;
-        // this.currentMatch = new VersusMatch()
+        this.currentMatch = new VersusMatch(this.playerIds, this.maps);
+        this.currentMatch.start();
     }
 
     startRogueMatch() {
@@ -33,15 +34,6 @@ export default class Game {
     startLevelsMatch() {
 
     }
-
-    // startMatch(matchSettings: RoomSettings) {
-    //     this.inMatch = true;
-    // }
-
-    // endCurrentMatch() {
-    //     this.inMatch = false;
-    //     this.currentMatch = null;
-    // }
 
     addMap(name: string, map: GameMap) {
         this.maps[name] = map;

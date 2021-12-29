@@ -18,7 +18,7 @@ export default abstract class Match {
         this.playerIds = playerIds;
         this.maps = loadedMaps;
         this.inMatch = false;
-        this.onGameOver = null;
+        this.onGameOverFunction = null;
 
         if (settings.minPlayers > playerIds.length || playerIds.length >= settings.maxPlayers) {
             throw new Error("Cannot start match with, invalid number of players");
@@ -32,6 +32,10 @@ export default abstract class Match {
     abstract isGameOver(): boolean;
 
     abstract onUpdate(time: number): void;
+
+    abstract getPlayerControllerBindings(): {
+        [key: string]: (playerId: string, ...args: any) => void
+    };
 
     start() {
         this.inMatch = true;

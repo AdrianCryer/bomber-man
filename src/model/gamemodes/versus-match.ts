@@ -1,3 +1,4 @@
+import { Direction } from "../../util/types";
 import GameMap from "../game-map";
 import Room, { RoomSettings } from "../room";
 import Match, { MatchSettings } from "./match";
@@ -32,18 +33,22 @@ const DEFAULT_VERSUS_SETTINGS: Omit<RoomSettings, 'map'> = {
     }
 };
 
+const DEFAULT_MATCH_SETTINGS = {
+    minPlayers: 1,
+    maxPlayers: 4
+}
+
 export default class VersusMatch extends Match {
 
     room: Room;
     roomSettings: RoomSettings;
 
     constructor(
-        settings: MatchSettings, 
         playerIds: string[], 
         loadedMaps: Record<string, GameMap>, 
         roomSettings?: RoomSettings
     ) {
-        super(settings, playerIds, loadedMaps);
+        super(DEFAULT_MATCH_SETTINGS, playerIds, loadedMaps);
         this.roomSettings = roomSettings || {
             map: this.maps['retro'],
             ...DEFAULT_VERSUS_SETTINGS
@@ -51,6 +56,7 @@ export default class VersusMatch extends Match {
     }
 
     start(): void {
+        super.start();
         this.room = new Room(this.roomSettings, this.playerIds);
     }
 
@@ -62,6 +68,35 @@ export default class VersusMatch extends Match {
         this.room.mutate(time);
         if (this.isGameOver()) {
             this.onGameOverFunction();
+        }
+    }
+
+    getPlayerControllerBindings(): { [key: string]: (playerId: string, ...args: any) => void; } {
+        return {
+            place_bomb: (playerId: string) => {
+                if (this.inMatch) {
+                    const player = this.room.getPlayer(playerId);
+                    if (player.isAlive) {
+                        player.placeBomb();
+                    }
+                }
+            },
+            set_moving: (playerId: string, direction: Direction) => {
+                if (this.inMatch) {
+                    const player = this.room.getPlayer(playerId);
+                    if (player.isAlive) {
+                        player.setMoving(direction);
+                    }
+                }
+            },
+            stop_moving: (playerId: string, direction: Direction) => {
+                if (this.inMatch) {
+                    const player = this.room.getPlayer(playerId);
+                    if (player.isAlive) {
+                        player.stopMoving(direction);
+                    }
+                }
+            }
         }
     }
 

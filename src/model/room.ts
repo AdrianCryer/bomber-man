@@ -138,7 +138,7 @@ export default class Room {
         }
     }
 
-    getPlayer(playerId: string) {
+    getPlayer(playerId: string): Player {
         if (!this.players.has(playerId)) {
             throw new Error("Invalid player");
         }

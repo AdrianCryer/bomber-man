@@ -6,6 +6,8 @@ import { AbsoluteContainer } from "./absolute-container";
 import MenuScreen from "./screens/menu-screen";
 import ScreenManager from "./screens/screen-manager";
 import Match from "../model/gamemodes/match";
+import RoomScreen from "./screens/room-screen";
+import VersusMatch from "../model/gamemodes/versus-match";
 
 const ASSETS = {    
     "solid": "../assets/solid-sprite.png",
@@ -116,6 +118,7 @@ export default class GameView {
     onMenuClickPlay(mode: GameMode) {
         if (mode === 'rogue') {
             // Start into game
+
         } else if (mode === 'versus') {
             /** @todo Show menu */
 
@@ -125,20 +128,23 @@ export default class GameView {
         }
     }
 
-    onMatchReady(match: Match) {
-        // setTimeout(() => {
-        //     this.screenManager.navigate(
-        //         "match", new MatchScreen(this.app, game.currentMatch, this.playerId),
-        //         { transitionName: 'radial-out' }
-        //     );
-        // }, 2000);
+    onMatchReady(args: { match: Match, mode: GameMode }) {
+        if (args.mode === 'versus') {
+            const versusMatch = args.match as VersusMatch;
+            setTimeout(() => {
+                this.screenManager.navigate(
+                    "match", new RoomScreen(this.app, versusMatch.room, this.playerId),
+                    { transitionName: 'radial-out' }
+                );
+            }, 2000);
+        }
     }
 
     onMatchUpdate(match: Match) {
-        // const matchScreen = this.screenManager.getScreen("match") as MatchScreen;
-        // if (matchScreen) {
-        //     matchScreen.updateMatch(match);
-        // }
+        const matchScreen = this.screenManager.getScreen("match") as RoomScreen;
+        if (matchScreen) {
+            matchScreen.updateMatch((match as VersusMatch).room);
+        }
     }
 
     resize() {

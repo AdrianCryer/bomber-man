@@ -1,6 +1,6 @@
 import { Position } from "../../util/types";
 import Damagable from "../behaviours/damagable";
-import Match from "../match";
+import Room from "../room";
 import { StatType } from "../types";
 import Entity from "./entity";
 
@@ -21,7 +21,7 @@ export default class Powerup extends Entity {
         this.addBehaviour(new Damagable(100, true));
     }
 
-    onUpdate(match: Match, time: number): void {
+    onUpdate(match: Room, time: number): void {
         this.getBehaviour(Damagable).onUpdate(this, match, time);
     }
 }

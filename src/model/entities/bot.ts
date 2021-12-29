@@ -1,13 +1,11 @@
 import { Position, Direction } from "../../util/types";
 import { Movement } from "../behaviours/movement";
-import Match from "../match";
+import Room from "../room";
 import Player from "./player";
 import { AStar } from "../../util/pathfinding";
 import Brick from "./brick";
-import Bomb from "./bomb";
 import Queue from "queue-fifo";
 import { StatsConfig } from "../types";
-import Damagable from "../behaviours/damagable";
 import Explosion from "./explosion";
 
 /**
@@ -40,7 +38,7 @@ export default class Bot extends Player {
         this.actionStack = [];
     }
 
-    assessBombPlacement(match: Match, position: Position): number {
+    assessBombPlacement(match: Room, position: Position): number {
         // Assign each bomb placement a score
 
         // Assuming bomb has been placed, which has the quickest flee time
@@ -48,7 +46,7 @@ export default class Bot extends Player {
         return -1;
     }
 
-    chooseNextAction(match: Match) {
+    chooseNextAction(match: Room) {
 
         const position = this.position.round();
         const bombablePositionsGenerator = this.findNearestSpaceAccessibleToBricks(match, position);
@@ -89,7 +87,7 @@ export default class Bot extends Player {
         }
     }
 
-    moveTo(match: Match, to: Position): boolean {
+    moveTo(match: Room, to: Position): boolean {
 
         const { width, height } = match.settings.map.props;
         const from = this.position.round();
@@ -111,12 +109,12 @@ export default class Bot extends Player {
         return true;
     }
 
-    isPositionDangerous(match: Match, position: Position) {
+    isPositionDangerous(match: Room, position: Position) {
         // for (let cell )
         // I
     }
 
-    onUpdate(match: Match, time: number)  {
+    onUpdate(match: Room, time: number)  {
 
         const movement = this.getBehaviour(Movement);
 
@@ -206,7 +204,7 @@ export default class Bot extends Player {
         super.onUpdate(match, time);
     }
 
-    getTraversableNeighbours(match: Match, position: Position): Position[] {
+    getTraversableNeighbours(match: Room, position: Position): Position[] {
 
         let neighbours = [];
         for (let i = 0; i < 4; i++) {
@@ -229,7 +227,7 @@ export default class Bot extends Player {
         return neighbours;
     }
 
-    *findNearestSpaceAccessibleToBricks(match: Match, position: Position): IterableIterator<Position> {
+    *findNearestSpaceAccessibleToBricks(match: Room, position: Position): IterableIterator<Position> {
 
         let seen = new Set();
         seen.add(`${position.x},${position.y}`);

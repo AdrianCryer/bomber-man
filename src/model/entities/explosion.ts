@@ -2,7 +2,7 @@ import shortUUID from "short-uuid";
 import { Direction, Position } from "../../util/types";
 import Damagable from "../behaviours/damagable";
 import { CellType } from "../game-map";
-import Match from "../match";
+import Room from "../room";
 import Brick from "./brick";
 import Entity from "./entity";
 
@@ -35,7 +35,7 @@ export default class Explosion extends Entity {
         this.affectedEntities = new Set();
     }
 
-    calculateExplosionCells(match: Match) {
+    calculateExplosionCells(match: Room) {
 
         const { radius, intensity } = this.config;
 
@@ -104,7 +104,7 @@ export default class Explosion extends Entity {
         return false;
     }
 
-    onUpdate(match: Match, time: number): void {
+    onUpdate(match: Room, time: number): void {
 
         if (time < this.config.timeCreated + this.config.duration * 1000) {
             for (let cell of this.cells) {

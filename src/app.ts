@@ -1,12 +1,12 @@
 import { Ticker, Loader } from "pixi.js";
-import Game from "./model/game";
+import Game, { GameMode } from "./model/game";
 import GameMap from "./model/game-map";
 import GameView from "./graphics/game-view";
 import EventEmitter from "events";
 import UserController from "./controllers/user-controller";
-import Match from "./model/match";
 import shortUUID from "short-uuid";
-import { Direction, Resources } from "./util/types";
+import { Resources } from "./util/types";
+import { throws } from "assert";
 
 /**
  * APP: Combines the Model, View and Controllers (MVC). 
@@ -28,13 +28,9 @@ import { Direction, Resources } from "./util/types";
  *      PLAYER CONTROLLER
  */
 
-const TICK_RATE = 64;
+// const TICK_RATE = 64;
 const DEFAULT_GAME_SETTINGS = {
-    numberOfPlayers: 1,
-    statusBoard: {
-        alignment: 'left',
-        splitRatio: 0.2
-    }
+    tickrate: 64
 };
 
 const MAPS = {
@@ -78,66 +74,62 @@ export default class App {
         this.ticker = new Ticker();
         this.ticker.stop();
 
-        this.socket.on("play", () => {
-            if (!this.model.inMatch) {
+        this.socket.on("play", (mode: GameMode) => {
+            if (!this.model.hasMatchStarted) {
 
-                this.model.startDefaultMatch();
-                this.socket.emit("game_ready", this.model);
+                if (mode === 'versus') {
+                    this.model.startVersusMatch();
+                } else if (mode === 'rogue') {
+                    this.model.startRogueMatch();
+                }
 
-                // Setup fixed update ticker
-                this.ticker.add(() => {
-                    let timeNow = (new Date()).getTime();
-                    let timeDiff = timeNow - this.time
-
-                    if (timeDiff < Math.round(1000 / TICK_RATE)) {
-                        return;
-                    }
-                    this.time = timeNow;
-                    this.model.mutate(timeNow);
-                    this.socket.emit("update_match", this.model.currentMatch);
-
-                    const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
-                    if (!player.isAlive()) {
-                        this.model.endCurrentMatch();
-                        this.socket.emit("match_over");
-                        this.ticker.stop();
-                    }
+                this.socket.emit("match_ready", {
+                    match: this.model.currentMatch, 
+                    mode
                 });
-                this.ticker.start();
             }
         });
-        this.socket.on("place_bomb", () => {
-            if (this.model.inMatch) {
-                const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
-                player.placeBomb();
+
+        this.socket.on("client_match_loaded", () => {
+            
+            // Handle Game Over
+            this.model.currentMatch.onGameOver(() => {
+                this.socket.emit("match_over");
+                this.ticker.stop();
+            });
+
+            // Setip player controller specific to the current match.
+            const bindings = this.model.currentMatch.getPlayerControllerBindings();
+            for (let [key, fn] of Object.entries(bindings)) {
+                this.socket.on(key, (...args: any) => fn(THIS_PLAYER_ID, ...args));
             }
-        });
-        this.socket.on("set_moving", (direction: Direction) => {
-            const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
-            player.setMoving(direction);
-        });
-        this.socket.on("stop_moving", (direction: Direction) => {
-            const player = this.model.currentMatch.getPlayer(THIS_PLAYER_ID);
-            player.stopMoving(direction);
+            
+            // Setup fixed update ticker
+            this.ticker.add(() => {
+                let timeNow = (new Date()).getTime();
+                let timeDiff = timeNow - this.time
+
+                if (timeDiff < Math.round(1000 / this.model.settings.tickrate)) {
+                    return;
+                }
+                this.time = timeNow;
+                this.model.onUpdate(timeNow);
+                this.socket.emit("match_update", this.model.currentMatch);
+            });
+            this.ticker.start();
         });
     }
 
     /** This method will not touch the model. */
     setupClient() {
-        this.socket.on("ready", () => {
-            this.view.initialise();
-        });
-        this.socket.on("game_ready", (game: Game) => {
-            this.view.onGameReady(game);
-        });
-
-        this.socket.on("update_match", (match: Match) => {
-            this.view.onMatchUpdate(match);
-        });
+        this.socket.on("client_game_loaded", () => this.view.initialise());
+        this.socket.on("match_ready", (args) => this.view.onMatchReady(args));
+        this.socket.on("match_update", (match) => this.view.onMatchUpdate(match));
         this.socket.on("match_over", () => {
-            // this.view.showGameOverScreen();
+            console.log("Game over")
         });
-        this.view.onPlay(() => this.socket.emit("play"));
+        this.view.onPlay((mode) => this.socket.emit("play", mode));
+        this.view.onMatchLoaded(() => this.socket.emit("client_match_loaded"))
         this.controller.setup();
     }
 
@@ -162,7 +154,7 @@ export default class App {
 
         // Test loading
         setTimeout(() => {
-            this.socket.emit("ready", this.model);
+            this.socket.emit("client_game_loaded", this.model);
         }, 250);
     }
 }

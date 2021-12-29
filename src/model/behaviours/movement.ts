@@ -1,4 +1,4 @@
-import Match from "../match";
+import Room from "../room";
 import Entity, { Behaviour } from "../entities/entity";
 import { Slidable } from "./slidable";
 import { Direction } from "../../util/types";
@@ -24,7 +24,7 @@ export class Movement implements Behaviour {
         this.moveUnits = -1;
     }
 
-    onUpdate(entity: Entity, match: Match, time: number) {
+    onUpdate(entity: Entity, match: Room, time: number) {
 
         if (!this.inTransition && this.wantsToMove) {
             const nextPos = entity.position.getNextPosition(this.movingDirection);

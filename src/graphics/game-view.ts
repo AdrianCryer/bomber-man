@@ -1,12 +1,16 @@
 import * as PIXI from "pixi.js";
-import { SCALE_MODES } from "pixi.js";
+import { Resource, SCALE_MODES } from "pixi.js";
 import FontFaceObserver from "fontfaceobserver";
-import Game from "../model/game";
-import Match from "../model/match";
+import Game, { GameMode } from "../model/game";
 import { AbsoluteContainer } from "./absolute-container";
 import MenuScreen from "./screens/menu-screen";
-import MatchScreen from "./screens/match-screen";
 import ScreenManager from "./screens/screen-manager";
+import Screen from "./screens/screen";
+import Match from "../model/gamemodes/match";
+import VersusMatch from "../model/gamemodes/versus-match";
+import { Resources } from "../util/types";
+import VersusView from "./views/versus-view";
+import { IMatchUpdatable } from "./views/match-updatable";
 
 const ASSETS = {    
     "solid": "../assets/solid-sprite.png",
@@ -26,8 +30,10 @@ export default class GameView {
     game: Game;
     playerId: string;
     screenManager: ScreenManager;
+    screenRoot: AbsoluteContainer;
 
-    onPlayFunction: () => void;
+    onPlayFunction: (mode: GameMode) => void;
+    onMatchLoadedFunction: () => void;
 
     constructor(root: HTMLElement, playerId: string, defaultWidth?: number, defaultHeight?: number) {
 
@@ -50,14 +56,23 @@ export default class GameView {
         this.viewBounds = new PIXI.Rectangle(0, 0, this.app.view.width, this.app.view.height);
         this.app.stage.width = this.app.view.width;
         this.app.stage.height = this.app.view.height;
+
+        // Screen root
+        this.screenRoot = new AbsoluteContainer();
+        this.screenRoot.setBounds(this.viewBounds);
+        this.app.stage.addChild(this.screenRoot);
     }
 
-    onPlay(fn: () => void) {
+    onPlay(fn: (mode: GameMode) => void) {
         this.onPlayFunction = fn
     }
 
+    onMatchLoaded(fn: () => void) {
+        this.onMatchLoadedFunction = fn;
+    }
+
     createIntermediateScreen() {
-        const intermediateScreen = new AbsoluteContainer();
+        const intermediateScreen = new Screen(this.viewBounds);
         intermediateScreen.setBounds(this.viewBounds);
 
         const style = new PIXI.TextStyle({
@@ -80,8 +95,18 @@ export default class GameView {
     }
 
     initialise() {
+        this.screenManager = new ScreenManager(this.screenRoot);
 
-        this.screenManager = new ScreenManager(this.app);
+        const intermediateScreen = this.createIntermediateScreen();
+        const onClickPlay = (mode: GameMode) => {
+            this.screenManager.navigate(
+                "intermediate",
+                intermediateScreen,
+                { transitionName: 'radial-in' }
+            );
+            this.onPlayFunction(mode);
+        };
+        
         this.screenManager.navigate(
             "menu",
             new MenuScreen(this.app, {
@@ -89,20 +114,11 @@ export default class GameView {
                 menu: [
                     {
                         text: "PLAY",
-                        onSelect: () => {
-
-                            const intermediateScreen = this.createIntermediateScreen();
-                            this.screenManager.navigate(
-                                "intermediate",
-                                intermediateScreen,
-                                { transitionName: 'radial-in' }
-                            );
-                            this.onPlayFunction();
-                        }
+                        onSelect: () => onClickPlay('rogue')
                     },
                     {
                         text: "VERSUS",
-                        onSelect: () => { console.log("Clicked versus" )}
+                        onSelect: () => onClickPlay('versus')
                     },
                     {
                         text: "SETTINGS",
@@ -113,19 +129,41 @@ export default class GameView {
         );
     }
 
-    onGameReady(game: Game) {
+    onMenuClickPlay(mode: GameMode) {
+        if (mode === 'rogue') {
+            // Start into game
+
+        } else if (mode === 'versus') {
+            /** @todo Show menu */
+
+
+        } else if (mode === 'levels') {
+            // Show level select
+        }
+    }
+
+    onMatchReady(args: { match: Match, mode: GameMode }) {
         setTimeout(() => {
-            this.screenManager.navigate(
-                "match", new MatchScreen(this.app, game.currentMatch, this.playerId),
-                { transitionName: 'radial-out' }
-            );
+            if (args.mode === 'versus') {
+                const versusMatch = args.match as VersusMatch;
+                this.screenManager
+                    .navigate(
+                        "match", 
+                        new VersusView(this.viewBounds, versusMatch, this.playerId, this.getResources()),
+                        { transitionName: 'radial-out' },
+                        this.onMatchLoadedFunction
+                    );
+            } else if (args.mode === 'rogue') {
+                // const rogueMatch = args.match as RogueMatch;
+            }
         }, 2000);
     }
 
     onMatchUpdate(match: Match) {
-        const matchScreen = this.screenManager.getScreen("match") as MatchScreen;
+        // yuck... 
+        const matchScreen = this.screenManager.getScreen("match") as unknown as IMatchUpdatable;
         if (matchScreen) {
-            matchScreen.updateMatch(match);
+            matchScreen.onUpdate(match);
         }
     }
 
@@ -150,5 +188,9 @@ export default class GameView {
 
         const font = new FontFaceObserver("oldschool");
         await font.load();
+    }
+
+    getResources(): Resources {
+        return this.app.loader.resources;
     }
 }

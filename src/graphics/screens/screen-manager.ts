@@ -1,5 +1,6 @@
 import * as PIXI from "pixi.js";
 import { AbsoluteContainer } from "../absolute-container";
+import Screen from "./screen";
 
 export type TransitionConfig = {
     transitionName: 'radial-in' | 'radial-out';
@@ -7,15 +8,21 @@ export type TransitionConfig = {
 
 export default class ScreenManager {
 
-    app: PIXI.Application;
-    history: [routeName: string, screen: AbsoluteContainer][];
+    parent: AbsoluteContainer;
+    history: [routeName: string, screen: Screen][];
 
-    constructor(app: PIXI.Application) {
-        this.app = app;
+    constructor(parent: AbsoluteContainer) {
+        this.parent = parent;
         this.history = [];
     }
 
-    navigate(routeName: string, screen: AbsoluteContainer, transitionConfig?: TransitionConfig) {
+    navigate(
+        routeName: string, 
+        screen: Screen, 
+        transitionConfig?: TransitionConfig, 
+        callback?: () => void
+    ) {
+
         if (this.history.length > 0) {
             const lastScreen = this.history[this.history.length - 1][1];
             if (transitionConfig) {
@@ -23,14 +30,20 @@ export default class ScreenManager {
                 if (name === 'radial-in') {
                     this.playRadialScreenTransition(lastScreen, false, 7, () => {
                         this.navigate(routeName, screen);
+                        if (callback) {
+                            callback();
+                        }
                     });
                 } else if (name === 'radial-out') {
-                    this.app.stage.addChild(screen);
+                    this.parent.addChild(screen);
                     screen.show();
                     
                     this.playRadialScreenTransition(screen, true, 7, () => {
                         lastScreen.hide();
                         this.history.push([routeName, screen]);
+                        if (callback) {
+                            callback();
+                        }
                     });
                 }
             } else {
@@ -39,13 +52,13 @@ export default class ScreenManager {
         }
 
         if (this.history.length == 0 || !transitionConfig) {
-            this.app.stage.addChild(screen);
+            this.parent.addChild(screen);
             this.history.push([routeName, screen]);
             screen.show();
         }
     }
 
-    getScreen(routeName: string): AbsoluteContainer {
+    getScreen(routeName: string): Screen {
         for (let [name, screen] of this.history) {
             if (name === routeName) {
                 return screen;
@@ -59,8 +72,8 @@ export default class ScreenManager {
     }
 
     playRadialScreenTransition(target: PIXI.Container, reverse: boolean, speed: number, callback: () => void) {
-        const { width, height } = this.app.screen;
-        const stage = this.app.stage;
+        const { width, height } = this.parent.getBounds();
+        const stage = this.parent;
 
         const hole = new PIXI.Graphics();
         stage.addChild(hole);

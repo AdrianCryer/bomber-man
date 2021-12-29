@@ -5,8 +5,7 @@ import GameView from "./graphics/game-view";
 import EventEmitter from "events";
 import UserController from "./controllers/user-controller";
 import shortUUID from "short-uuid";
-import { Direction, Resources } from "./util/types";
-import Match from "./model/gamemodes/match";
+import { Resources } from "./util/types";
 
 /**
  * APP: Combines the Model, View and Controllers (MVC). 

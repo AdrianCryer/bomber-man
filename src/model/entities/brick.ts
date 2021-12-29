@@ -1,7 +1,7 @@
 import shortUUID from "short-uuid";
 import { Position } from "../../util/types";
 import Damagable from "../behaviours/damagable";
-import match from "../room";
+import Room from "../room";
 import Entity from "./entity";
 import Explosion from "./explosion";
 import Powerup from "./powerup";
@@ -14,7 +14,7 @@ export default class Brick extends Entity {
         this.addBehaviour(new Damagable(100, true));
     }
 
-    onUpdate(match: match, time: number): void {
+    onUpdate(match: Room, time: number): void {
 
         // Spawn powerup
         const damageComponent = this.getBehaviour(Damagable);

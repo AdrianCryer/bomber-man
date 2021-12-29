@@ -2,7 +2,7 @@ import shortUUID from "short-uuid";
 import { Position, Direction } from "../../util/types";
 import { Movement } from "../behaviours/movement";
 import Entity from "./entity";
-import Match from "../room";
+import Room from "../room";
 import { StatsConfig } from "../types";
 import Bomb from "./bomb";
 import Damagable from "../behaviours/damagable";
@@ -24,7 +24,7 @@ export default class Player extends Entity {
         this.addBehaviour(new Damagable(100000, false));
     }
 
-    onUpdate(match: Match, time: number) {
+    onUpdate(match: Room, time: number) {
 
         if (!this.isAlive()) {
             return;

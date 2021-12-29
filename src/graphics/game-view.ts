@@ -7,7 +7,6 @@ import MenuScreen from "./screens/menu-screen";
 import ScreenManager from "./screens/screen-manager";
 import Screen from "./screens/screen";
 import Match from "../model/gamemodes/match";
-import RoomScreen from "./screens/room-screen";
 import VersusMatch from "../model/gamemodes/versus-match";
 import { Resources } from "../util/types";
 import VersusView from "./views/versus-view";

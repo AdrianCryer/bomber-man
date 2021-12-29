@@ -1,6 +1,6 @@
 import { Direction } from "../../util/types";
 import Entity, { Behaviour } from "../entities/entity";
-import Match from "../room";
+import Room from "../room";
 
 
 export class Slidable implements Behaviour {
@@ -14,7 +14,7 @@ export class Slidable implements Behaviour {
         this.isSliding = false;
     }
 
-    onUpdate(entity: Entity, match: Match, time: number) {
+    onUpdate(entity: Entity, match: Room, time: number) {
 
         if (!this.isSliding) {
             return;

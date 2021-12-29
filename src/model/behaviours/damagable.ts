@@ -1,6 +1,5 @@
-import Entity from "../entities/entity";
-import entity, { Behaviour } from "../entities/entity";
-import match from "../room";
+import Entity, { Behaviour } from "../entities/entity";
+import Room from "../room";
 
 
 export default class Damagable implements Behaviour {
@@ -18,7 +17,7 @@ export default class Damagable implements Behaviour {
         this.invulerableTo = new Set();
     }
 
-    onUpdate(entity: entity, match: match, time: number) {
+    onUpdate(entity: Entity, match: Room, time: number) {
         if (this.invulnerable) {
             return;
         }

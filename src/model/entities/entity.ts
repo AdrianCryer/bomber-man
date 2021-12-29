@@ -1,9 +1,9 @@
 import { Position } from "../../util/types";
-import Match from "../room";
+import Room from "../room";
 
 
 export interface Behaviour {
-    onUpdate: (entity: Entity, match: Match, time: number) => void;
+    onUpdate: (entity: Entity, match: Room, time: number) => void;
 }
 
 export interface BehaviourClass<T extends Behaviour> {
@@ -32,7 +32,7 @@ export default abstract class Entity {
      * @returns List of entity strings that have been modified since the last 
      *          game state.
      */
-    abstract onUpdate(match: Match, time: number): void;
+    abstract onUpdate(match: Room, time: number): void;
 
     hasComponent<B extends Behaviour>(cls: BehaviourClass<B>): boolean {
         return this.getBehaviour(cls) !== null;

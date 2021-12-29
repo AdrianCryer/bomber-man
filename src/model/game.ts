@@ -1,7 +1,6 @@
 import GameMap from "./game-map";
 import Match from "./gamemodes/match";
 import VersusMatch from "./gamemodes/versus-match";
-import Room, { RoomSettings } from "./room";
 
 export type GameMode = 'versus' | 'levels' | 'rogue';
 export type GameSettings = {};

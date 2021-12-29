@@ -1,13 +1,17 @@
 import * as PIXI from "pixi.js";
-import { SCALE_MODES } from "pixi.js";
+import { Resource, SCALE_MODES } from "pixi.js";
 import FontFaceObserver from "fontfaceobserver";
 import Game, { GameMode } from "../model/game";
 import { AbsoluteContainer } from "./absolute-container";
 import MenuScreen from "./screens/menu-screen";
 import ScreenManager from "./screens/screen-manager";
+import Screen from "./screens/screen";
 import Match from "../model/gamemodes/match";
 import RoomScreen from "./screens/room-screen";
 import VersusMatch from "../model/gamemodes/versus-match";
+import { Resources } from "../util/types";
+import VersusView from "./views/versus-view";
+import { IMatchUpdatable } from "./views/match-updatable";
 
 const ASSETS = {    
     "solid": "../assets/solid-sprite.png",
@@ -27,6 +31,7 @@ export default class GameView {
     game: Game;
     playerId: string;
     screenManager: ScreenManager;
+    screenRoot: AbsoluteContainer;
 
     onPlayFunction: (mode: GameMode) => void;
 
@@ -51,6 +56,11 @@ export default class GameView {
         this.viewBounds = new PIXI.Rectangle(0, 0, this.app.view.width, this.app.view.height);
         this.app.stage.width = this.app.view.width;
         this.app.stage.height = this.app.view.height;
+
+        // Screen root
+        this.screenRoot = new AbsoluteContainer();
+        this.screenRoot.setBounds(this.viewBounds);
+        this.app.stage.addChild(this.screenRoot);
     }
 
     onPlay(fn: (mode: GameMode) => void) {
@@ -58,7 +68,7 @@ export default class GameView {
     }
 
     createIntermediateScreen() {
-        const intermediateScreen = new AbsoluteContainer();
+        const intermediateScreen = new Screen(this.viewBounds);
         intermediateScreen.setBounds(this.viewBounds);
 
         const style = new PIXI.TextStyle({
@@ -81,7 +91,7 @@ export default class GameView {
     }
 
     initialise() {
-        this.screenManager = new ScreenManager(this.app);
+        this.screenManager = new ScreenManager(this.screenRoot);
 
         const intermediateScreen = this.createIntermediateScreen();
         const onClickPlay = (mode: GameMode) => {
@@ -129,21 +139,24 @@ export default class GameView {
     }
 
     onMatchReady(args: { match: Match, mode: GameMode }) {
-        if (args.mode === 'versus') {
-            const versusMatch = args.match as VersusMatch;
-            setTimeout(() => {
+        setTimeout(() => {
+            if (args.mode === 'versus') {
+                const versusMatch = args.match as VersusMatch;
                 this.screenManager.navigate(
-                    "match", new RoomScreen(this.app, versusMatch.room, this.playerId),
+                    "match", new VersusView(this.viewBounds, versusMatch, this.playerId, this.getResources()),
                     { transitionName: 'radial-out' }
                 );
-            }, 2000);
-        }
+            } else if (args.mode === 'rogue') {
+                // const rogueMatch = args.match as RogueMatch;
+            }
+        }, 2000);
     }
 
     onMatchUpdate(match: Match) {
-        const matchScreen = this.screenManager.getScreen("match") as RoomScreen;
+        // yuck... 
+        const matchScreen = this.screenManager.getScreen("match") as unknown as IMatchUpdatable;
         if (matchScreen) {
-            matchScreen.updateMatch((match as VersusMatch).room);
+            matchScreen.onUpdate(match);
         }
     }
 
@@ -168,5 +181,9 @@ export default class GameView {
 
         const font = new FontFaceObserver("oldschool");
         await font.load();
+    }
+
+    getResources(): Resources {
+        return this.app.loader.resources;
     }
 }

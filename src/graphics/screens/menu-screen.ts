@@ -1,7 +1,7 @@
 import * as PIXI from "pixi.js";
 import { Rectangle } from "pixi.js";
 import { Ease, ease } from "pixi-ease";
-import { AbsoluteContainer } from "../absolute-container";
+import Screen from "./screen";
 
 const BACKGROUND_COLOUR = 0x00253C;
 const BORDER_PADDING = 1300 * 0.06;
@@ -14,23 +14,17 @@ export type MenuOptions = {
     }[]
 };
 
-export default class MenuScreen extends AbsoluteContainer {
+export default class MenuScreen extends Screen {
 
     app: PIXI.Application;
     title: PIXI.Text;
     options: MenuOptions;
 
     constructor(app: PIXI.Application, options: MenuOptions) {
-        super();
+        super(new Rectangle(0, 0, app.view.width, app.view.height));
         this.app = app;
         this.options = options;
         this.app.renderer.backgroundColor = BACKGROUND_COLOUR;
-        this.setBounds(new Rectangle(
-            0, 
-            0, 
-            this.app.view.width, 
-            this.app.view.height 
-        ));
         
         this.setupBackground();
         this.setupTitle();

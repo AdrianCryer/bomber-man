@@ -1,7 +1,9 @@
 import * as PIXI from "pixi.js";
 import Player from "../../../model/entities/player";
-import Match from "../../../model/room";
+import Room from "../../../model/room";
+import { Resources } from "../../../util/types";
 import { AbsoluteContainer } from "../../absolute-container";
+import Screen from "../screen";
 import RoomGrid from "./room-grid";
 import StatsPane from "./stats-pane";
 
@@ -9,24 +11,18 @@ const HEADER_HEIGHT_PX = 120;
 const MIN_PADDING_SIDES_PX = 100;
 const MIN_PADDING_BOTTOM_PX = 20;
 
-export default class RoomScreen extends AbsoluteContainer {
+export default class RoomScreen extends Screen {
 
-    app: PIXI.Application;
+    resources: Resources;
     playerId: string;
     title: PIXI.Text;
     header: AbsoluteContainer;
     grid: RoomGrid;
     statsPane: StatsPane;
 
-    constructor(app: PIXI.Application, initialMatch: Match, playerId: string) {
-        super();
-        this.app = app;
-        this.setBounds(new PIXI.Rectangle(
-            0, 
-            0, 
-            this.app.view.width, 
-            this.app.view.height 
-        ));
+    constructor(bounds: PIXI.Rectangle, resources: Resources, initialMatch: Room, playerId: string) {
+        super(bounds);
+        this.resources = resources;
         this.playerId = playerId;
         this.sortableChildren = true;
 
@@ -78,7 +74,7 @@ export default class RoomScreen extends AbsoluteContainer {
             .endFill();
         this.addChild(frame);
 
-        const background = new PIXI.TilingSprite(this.app.loader.resources['brick'].texture);
+        const background = new PIXI.TilingSprite(this.resources['brick'].texture);
         background.width = this.bounds.width;
         background.height = this.bounds.height - gameBounds.y;
         background.tileScale.set(10)
@@ -87,8 +83,8 @@ export default class RoomScreen extends AbsoluteContainer {
         this.addChild(background);
     }
 
-    setupMatch(initialMatch: Match) {
-        this.grid = new RoomGrid(this.app.loader.resources, {
+    setupMatch(initialMatch: Room) {
+        this.grid = new RoomGrid(this.resources, {
             defaultMapSize: { width: 16, height: 10 }
         });
 
@@ -103,8 +99,8 @@ export default class RoomScreen extends AbsoluteContainer {
         this.addChild(this.grid);
     }
 
-    setupStatsPane(initialMatch: Match) {
-        this.statsPane = new StatsPane(this.app.loader.resources);
+    setupStatsPane(initialMatch: Room) {
+        this.statsPane = new StatsPane(this.resources);
         const gameBounds = this.grid.renderableArea.getBounds();
         this.statsPane.setBounds(new PIXI.Rectangle(
             this.bounds.x,
@@ -117,8 +113,8 @@ export default class RoomScreen extends AbsoluteContainer {
         this.addChild(this.statsPane);
     }
 
-    updateMatch(match: Match) {
-        this.grid.mutate(match);
-        this.statsPane.mutate(match.entitities[this.playerId] as Player);
+    updateRoom(room: Room) {
+        this.grid.mutate(room);
+        this.statsPane.mutate(room.entitities[this.playerId] as Player);
     }
 }

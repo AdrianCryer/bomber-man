@@ -38,8 +38,11 @@ const DEFAULT_MATCH_SETTINGS = {
     maxPlayers: 4
 }
 
+const COUNTER_DURATION_SECONDS = 5;
+
 export default class VersusMatch extends Match {
 
+    time: number;
     room: Room;
     roomSettings: RoomSettings;
 

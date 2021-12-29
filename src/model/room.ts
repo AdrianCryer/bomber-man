@@ -57,9 +57,6 @@ export default class Room {
     players: Set<string>;
     bots: Set<string>;
 
-    /** Number of elapsed ticks */
-    time: number;
-
     constructor(settings: RoomSettings, playerIds: string[]) {
         this.settings = settings;
         this.playerIds = playerIds;
@@ -238,8 +235,6 @@ export default class Room {
 
     // Fixed update
     mutate(time: number) {
-        this.time = time;
- 
         for (let entity of Object.values(this.entitities)) {
             entity.onUpdate(this, time);
         }

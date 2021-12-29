@@ -3,7 +3,9 @@ import Match from "./gamemodes/match";
 import VersusMatch from "./gamemodes/versus-match";
 
 export type GameMode = 'versus' | 'levels' | 'rogue';
-export type GameSettings = {};
+export type GameSettings = {
+    tickrate: number;
+};
 
 export default class Game {
 
@@ -38,7 +40,7 @@ export default class Game {
         this.maps[name] = map;
     }
 
-    mutate(time: number) {
+    onUpdate(time: number) {
         if (!this.hasMatchStarted) {
             return;
         }

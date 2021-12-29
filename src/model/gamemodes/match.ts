@@ -7,11 +7,13 @@ export type MatchSettings = {
 
 export default abstract class Match {
 
+    ticks: number;
     settings: MatchSettings;
     playerIds: string[];
-    inMatch: boolean;
     maps: Record<string, GameMap>;
     onGameOverFunction: () => void;
+    
+    inMatch: boolean;
  
     constructor(settings: MatchSettings, playerIds: string[], loadedMaps: Record<string, GameMap>) {
         this.settings = settings;

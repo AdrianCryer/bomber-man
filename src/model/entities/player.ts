@@ -44,7 +44,7 @@ export default class Player extends Entity {
                     timer: this.stats['bombTimer'],
                     power: 1,
                     slidingSpeed: 5,
-                    timePlaced: match.time
+                    timePlaced: time
                 }
             ));
             this.shouldPlaceBomb = false;

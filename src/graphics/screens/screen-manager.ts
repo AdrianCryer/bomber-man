@@ -16,7 +16,13 @@ export default class ScreenManager {
         this.history = [];
     }
 
-    navigate(routeName: string, screen: Screen, transitionConfig?: TransitionConfig) {
+    navigate(
+        routeName: string, 
+        screen: Screen, 
+        transitionConfig?: TransitionConfig, 
+        callback?: () => void
+    ) {
+
         if (this.history.length > 0) {
             const lastScreen = this.history[this.history.length - 1][1];
             if (transitionConfig) {
@@ -24,6 +30,9 @@ export default class ScreenManager {
                 if (name === 'radial-in') {
                     this.playRadialScreenTransition(lastScreen, false, 7, () => {
                         this.navigate(routeName, screen);
+                        if (callback) {
+                            callback();
+                        }
                     });
                 } else if (name === 'radial-out') {
                     this.parent.addChild(screen);
@@ -32,6 +41,9 @@ export default class ScreenManager {
                     this.playRadialScreenTransition(screen, true, 7, () => {
                         lastScreen.hide();
                         this.history.push([routeName, screen]);
+                        if (callback) {
+                            callback();
+                        }
                     });
                 }
             } else {

@@ -6,6 +6,7 @@ import EventEmitter from "events";
 import UserController from "./controllers/user-controller";
 import shortUUID from "short-uuid";
 import { Resources } from "./util/types";
+import { throws } from "assert";
 
 /**
  * APP: Combines the Model, View and Controllers (MVC). 
@@ -27,8 +28,10 @@ import { Resources } from "./util/types";
  *      PLAYER CONTROLLER
  */
 
-const TICK_RATE = 64;
-const DEFAULT_GAME_SETTINGS = {};
+// const TICK_RATE = 64;
+const DEFAULT_GAME_SETTINGS = {
+    tickrate: 64
+};
 
 const MAPS = {
     'retro': "../maps/retro.txt",
@@ -76,52 +79,57 @@ export default class App {
 
                 if (mode === 'versus') {
                     this.model.startVersusMatch();
-
-                    this.socket.emit("match_ready", {
-                        match: this.model.currentMatch, 
-                        mode
-                    });
+                } else if (mode === 'rogue') {
+                    this.model.startRogueMatch();
                 }
 
-                // Handle Game Over
-                this.model.currentMatch.onGameOver(() => {
-                    this.socket.emit("match_over");
-                    this.ticker.stop();
+                this.socket.emit("match_ready", {
+                    match: this.model.currentMatch, 
+                    mode
                 });
-
-                // Setip player controller specific to the current match.
-                const bindings = this.model.currentMatch.getPlayerControllerBindings();
-                for (let [key, fn] of Object.entries(bindings)) {
-                    this.socket.on(key, (...args: any) => fn(THIS_PLAYER_ID, ...args));
-                }
-                
-                // Setup fixed update ticker
-                this.ticker.add(() => {
-                    let timeNow = (new Date()).getTime();
-                    let timeDiff = timeNow - this.time
-
-                    if (timeDiff < Math.round(1000 / TICK_RATE)) {
-                        return;
-                    }
-                    this.time = timeNow;
-                    this.model.mutate(timeNow);
-                    this.socket.emit("update_match", this.model.currentMatch);
-                });
-                this.ticker.start();
             }
+        });
+
+        this.socket.on("client_match_loaded", () => {
+            
+            // Handle Game Over
+            this.model.currentMatch.onGameOver(() => {
+                this.socket.emit("match_over");
+                this.ticker.stop();
+            });
+
+            // Setip player controller specific to the current match.
+            const bindings = this.model.currentMatch.getPlayerControllerBindings();
+            for (let [key, fn] of Object.entries(bindings)) {
+                this.socket.on(key, (...args: any) => fn(THIS_PLAYER_ID, ...args));
+            }
+            
+            // Setup fixed update ticker
+            this.ticker.add(() => {
+                let timeNow = (new Date()).getTime();
+                let timeDiff = timeNow - this.time
+
+                if (timeDiff < Math.round(1000 / this.model.settings.tickrate)) {
+                    return;
+                }
+                this.time = timeNow;
+                this.model.onUpdate(timeNow);
+                this.socket.emit("match_update", this.model.currentMatch);
+            });
+            this.ticker.start();
         });
     }
 
     /** This method will not touch the model. */
     setupClient() {
-        this.socket.on("ready", () => this.view.initialise());
+        this.socket.on("client_game_loaded", () => this.view.initialise());
         this.socket.on("match_ready", (args) => this.view.onMatchReady(args));
-        this.socket.on("update_match", (match) => this.view.onMatchUpdate(match));
+        this.socket.on("match_update", (match) => this.view.onMatchUpdate(match));
         this.socket.on("match_over", () => {
             console.log("Game over")
-            // this.view.showGameOverScreen();
         });
         this.view.onPlay((mode) => this.socket.emit("play", mode));
+        this.view.onMatchLoaded(() => this.socket.emit("client_match_loaded"))
         this.controller.setup();
     }
 
@@ -146,7 +154,7 @@ export default class App {
 
         // Test loading
         setTimeout(() => {
-            this.socket.emit("ready", this.model);
+            this.socket.emit("client_game_loaded", this.model);
         }, 250);
     }
 }

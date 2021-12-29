@@ -33,6 +33,7 @@ export default class GameView {
     screenRoot: AbsoluteContainer;
 
     onPlayFunction: (mode: GameMode) => void;
+    onMatchLoadedFunction: () => void;
 
     constructor(root: HTMLElement, playerId: string, defaultWidth?: number, defaultHeight?: number) {
 
@@ -64,6 +65,10 @@ export default class GameView {
 
     onPlay(fn: (mode: GameMode) => void) {
         this.onPlayFunction = fn
+    }
+
+    onMatchLoaded(fn: () => void) {
+        this.onMatchLoadedFunction = fn;
     }
 
     createIntermediateScreen() {
@@ -141,10 +146,13 @@ export default class GameView {
         setTimeout(() => {
             if (args.mode === 'versus') {
                 const versusMatch = args.match as VersusMatch;
-                this.screenManager.navigate(
-                    "match", new VersusView(this.viewBounds, versusMatch, this.playerId, this.getResources()),
-                    { transitionName: 'radial-out' }
-                );
+                this.screenManager
+                    .navigate(
+                        "match", 
+                        new VersusView(this.viewBounds, versusMatch, this.playerId, this.getResources()),
+                        { transitionName: 'radial-out' },
+                        this.onMatchLoadedFunction
+                    );
             } else if (args.mode === 'rogue') {
                 // const rogueMatch = args.match as RogueMatch;
             }

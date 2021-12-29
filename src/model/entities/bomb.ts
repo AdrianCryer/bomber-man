@@ -27,10 +27,10 @@ export default class Bomb extends Entity {
         this.addBehaviour(new Slidable(config.slidingSpeed));
     }
 
-    onUpdate(match: Room, time: number): void {
+    onUpdate(room: Room, time: number): void {
 
         if (time < this.config.timePlaced + this.config.timer * 1000) {
-            this.getBehaviour(Slidable).onUpdate(this, match, time);
+            this.getBehaviour(Slidable).onUpdate(this, room, time);
         } else {
             const explosion = new Explosion(
                 shortUUID.generate(),
@@ -39,12 +39,12 @@ export default class Bomb extends Entity {
                     intensity: this.config.power,
                     duration: this.config.explosionDuration,
                     radius: this.config.explosionRadius,
-                    timeCreated: match.time
+                    timeCreated: time
                 }
             );
-            explosion.calculateExplosionCells(match);
-            match.createEntity(explosion);
-            match.removeEntity(this);
+            explosion.calculateExplosionCells(room);
+            room.createEntity(explosion);
+            room.removeEntity(this);
         }
     }
 }

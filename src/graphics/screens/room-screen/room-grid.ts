@@ -1,6 +1,6 @@
 import * as PIXI from "pixi.js";
 import { CellType } from "../../../model/game-map";
-import Match from "../../../model/room";
+import Room from "../../../model/room";
 import Player from "../../../model/entities/player";
 import { AbsoluteContainer } from "../../absolute-container";
 import Bomb from "../../../model/entities/bomb";
@@ -29,7 +29,7 @@ export default class RoomGrid extends AbsoluteContainer {
     renderableArea: AbsoluteContainer;
     
     cellWidth: number;
-    match: Match;
+    room: Room;
     resources: Resources;
 
     constructor(resources: Resources, settings: RoomGridSettings) {
@@ -46,19 +46,18 @@ export default class RoomGrid extends AbsoluteContainer {
         super.setBounds(bounds);
     }
 
-    calculateGridCellSize(match: Match) { 
+    calculateGridCellSize(room: Room) { 
         this.cellWidth = Math.min(
-            this.getBounds().width /  match.settings.map.props.width,
-            this.getBounds().height / match.settings.map.props.height
+            this.getBounds().width /  room.settings.map.props.width,
+            this.getBounds().height / room.settings.map.props.height
         );
     }
 
-    getRenderableGridBounds(match: Match): PIXI.Rectangle {
-        // if (!this.match) return PIXI.Rectangle.EMPTY;
-        this.calculateGridCellSize(match);
+    getRenderableGridBounds(room: Room): PIXI.Rectangle {
+        this.calculateGridCellSize(room);
         const { x, y, width, height } = this.getBounds();
-        const boundsWidth = this.cellWidth * match.settings.map.props.width;
-        const boundsHeight = this.cellWidth * match.settings.map.props.height;
+        const boundsWidth = this.cellWidth * room.settings.map.props.width;
+        const boundsHeight = this.cellWidth * room.settings.map.props.height;
 
         return new PIXI.Rectangle(
             x + width / 2 - boundsWidth / 2,
@@ -73,17 +72,17 @@ export default class RoomGrid extends AbsoluteContainer {
      * This can be used to render the next state of the match or refresh the 
      * grid entirely.
      * 
-     * @param match 
+     * @param room 
      */
-    mutate(match: Match) {
+    mutate(room: Room) {
 
-        this.calculateGridCellSize(match);
-        const renderableArea = this.getRenderableGridBounds(match);
+        this.calculateGridCellSize(room);
+        const renderableArea = this.getRenderableGridBounds(room);
         this.renderableArea.setBounds(renderableArea);
         this.renderableArea.position.set(renderableArea.x, renderableArea.y);
 
         // Setup grid
-        const { height, width } = match.settings.map.props;
+        const { height, width } = room.settings.map.props;
         if (!this.grid || height !== this.grid.length || width !== this.grid[0].length) {
             this.grid = [];
             for (let i = 0; i < height; i++) {
@@ -97,9 +96,9 @@ export default class RoomGrid extends AbsoluteContainer {
         // Handle new grid tiles
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
-                const id = match.grid[y][x].id;
+                const id = room.grid[y][x].id;
                 let spriteId;
-                switch (match.grid[y][x].type) {
+                switch (room.grid[y][x].type) {
                     case CellType.OPEN:
                     case CellType.SPAWN:
                         spriteId = 'open';
@@ -112,7 +111,7 @@ export default class RoomGrid extends AbsoluteContainer {
             }
         }
 
-        for (let entity of Object.values(match.entitities)) {
+        for (let entity of Object.values(room.entitities)) {
             if (entity instanceof Player) {
                 this.drawActor(entity, graphics);
             } else if (entity instanceof Bomb) {

@@ -24,6 +24,10 @@ export default class RogueMatch extends Match {
         super(DEFAULT_MATCH_SETTINGS, playerIds, loadedMaps);
     }
 
+    initialise(): void {
+        throw new Error("Method not implemented.");
+    }
+
     generateFloor() {
         
     }

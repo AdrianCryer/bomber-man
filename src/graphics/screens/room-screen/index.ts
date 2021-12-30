@@ -83,7 +83,7 @@ export default class RoomScreen extends Screen {
         this.addChild(background);
     }
 
-    setupMatch(initialMatch: Room) {
+    setupMatch(initialRoom: Room) {
         this.grid = new RoomGrid(this.resources, {
             defaultMapSize: { width: 16, height: 10 }
         });
@@ -94,12 +94,12 @@ export default class RoomScreen extends Screen {
             this.bounds.width - 2 * MIN_PADDING_SIDES_PX,
             this.bounds.height - HEADER_HEIGHT_PX - MIN_PADDING_BOTTOM_PX,
         ));
-        this.grid.mutate(initialMatch);
+        this.grid.mutate(initialRoom);
         this.grid.zIndex = 1;
         this.addChild(this.grid);
     }
 
-    setupStatsPane(initialMatch: Room) {
+    setupStatsPane(initialRoom: Room) {
         this.statsPane = new StatsPane(this.resources);
         const gameBounds = this.grid.renderableArea.getBounds();
         this.statsPane.setBounds(new PIXI.Rectangle(
@@ -109,7 +109,7 @@ export default class RoomScreen extends Screen {
             gameBounds.height
         ));
         this.statsPane.zIndex = 15;
-        this.statsPane.mutate(initialMatch.entitities[this.playerId] as Player);
+        this.statsPane.mutate(initialRoom.entitities[this.playerId] as Player);
         this.addChild(this.statsPane);
     }
 

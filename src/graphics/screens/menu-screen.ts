@@ -1,6 +1,6 @@
 import * as PIXI from "pixi.js";
 import { Rectangle } from "pixi.js";
-import { Ease, ease } from "pixi-ease";
+import { ease } from "pixi-ease";
 import Screen from "./screen";
 
 const BACKGROUND_COLOUR = 0x00253C;

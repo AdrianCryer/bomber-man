@@ -7,7 +7,7 @@ export type MatchSettings = {
 
 export default abstract class Match {
 
-    ticks: number;
+    time: number;
     settings: MatchSettings;
     playerIds: string[];
     maps: Record<string, GameMap>;
@@ -30,6 +30,8 @@ export default abstract class Match {
     onGameOver(fn: () => void): void {
         this.onGameOverFunction = fn;
     }
+
+    abstract initialise(): void;
     
     abstract isGameOver(): boolean;
 

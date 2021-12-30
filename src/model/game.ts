@@ -11,29 +11,30 @@ export default class Game {
 
     settings: GameSettings;
     playerIds: string[];
-    hasMatchStarted: boolean;
     currentMatch: Match;
     maps: Record<string, GameMap>;
 
     constructor(settings: GameSettings, playerIds: string[]) {
         this.settings = settings;
         this.playerIds = playerIds;
-        this.hasMatchStarted = false;
         this.maps = {};
     }
 
-    startVersusMatch() {
-        this.hasMatchStarted = true;
+    initialiseVersusMatch() {
         this.currentMatch = new VersusMatch(this.playerIds, this.maps);
-        this.currentMatch.start();
+        this.currentMatch.initialise();
     }
 
-    startRogueMatch() {
+    initialiseRogueMatch() {
 
     }
 
-    startLevelsMatch() {
+    initialiseLevelsMatch() {
 
+    }
+
+    isInMatch(): boolean {
+        return this.currentMatch !== undefined;
     }
 
     addMap(name: string, map: GameMap) {
@@ -41,7 +42,7 @@ export default class Game {
     }
 
     onUpdate(time: number) {
-        if (!this.hasMatchStarted) {
+        if (!this.isInMatch()) {
             return;
         }
         this.currentMatch.onUpdate(time)

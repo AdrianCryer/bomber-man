@@ -40,11 +40,16 @@ const DEFAULT_MATCH_SETTINGS = {
 
 const COUNTER_DURATION_SECONDS = 5;
 
+
 export default class VersusMatch extends Match {
 
-    time: number;
     room: Room;
     roomSettings: RoomSettings;
+
+    /** Count down timer */
+    countDownActive: boolean;
+    countDownTimerStart: number;
+    countDownDuration: number;
 
     constructor(
         playerIds: string[], 
@@ -58,9 +63,23 @@ export default class VersusMatch extends Match {
         };
     }
 
+    initialise(): void {
+        this.room = new Room(this.roomSettings, this.playerIds);
+    }
+
     start(): void {
         super.start();
-        this.room = new Room(this.roomSettings, this.playerIds);
+        this.startPreGameCountdown(COUNTER_DURATION_SECONDS);
+    }
+
+    startPreGameCountdown(duration: number) {
+        this.countDownActive = true;
+        this.countDownTimerStart = -1;
+        this.countDownDuration = duration;
+    }
+
+    getCountDownSeconds(time: number) {
+        return this.countDownDuration - Math.floor((time - this.countDownTimerStart) / 1000);
     }
 
     setSettings(roomSettings: RoomSettings) {
@@ -68,10 +87,19 @@ export default class VersusMatch extends Match {
     }
 
     onUpdate(time: number): void {
-        this.room.mutate(time);
-        if (this.isGameOver()) {
-            this.onGameOverFunction();
+        this.time = time;
+        if (this.countDownActive && this.countDownTimerStart < 0) {
+            this.countDownTimerStart = time;
+        } else if (this.countDownActive && time > this.countDownTimerStart + this.countDownDuration * 1000) {
+            this.countDownActive = false;
+            this.countDownTimerStart = -1;
+        } else {
+            if (this.isGameOver()) {
+                this.onGameOverFunction();
+            }
+            this.room.mutate(time);
         }
+
     }
 
     getPlayerControllerBindings(): { [key: string]: (playerId: string, ...args: any) => void; } {

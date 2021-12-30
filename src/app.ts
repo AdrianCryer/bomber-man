@@ -75,12 +75,12 @@ export default class App {
         this.ticker.stop();
 
         this.socket.on("play", (mode: GameMode) => {
-            if (!this.model.hasMatchStarted) {
+            if (!this.model.isInMatch()) {
 
                 if (mode === 'versus') {
-                    this.model.startVersusMatch();
+                    this.model.initialiseVersusMatch();
                 } else if (mode === 'rogue') {
-                    this.model.startRogueMatch();
+                    this.model.initialiseRogueMatch();
                 }
 
                 this.socket.emit("match_ready", {
@@ -92,6 +92,7 @@ export default class App {
 
         this.socket.on("client_match_loaded", () => {
             
+            console.log("CLIENT LOADED")
             // Handle Game Over
             this.model.currentMatch.onGameOver(() => {
                 this.socket.emit("match_over");
@@ -103,6 +104,8 @@ export default class App {
             for (let [key, fn] of Object.entries(bindings)) {
                 this.socket.on(key, (...args: any) => fn(THIS_PLAYER_ID, ...args));
             }
+
+            this.model.currentMatch.start();
             
             // Setup fixed update ticker
             this.ticker.add(() => {
